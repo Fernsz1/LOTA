@@ -1,2 +1,3 @@
 # LOTA
 
+fighting game
