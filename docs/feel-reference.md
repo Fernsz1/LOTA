@@ -40,8 +40,8 @@ This is the decision the whole plan leans on, restated as *feel*:
   real frame data feel identical to final art. That is the entire reason Phase 3
   (boxes) → 3.6 (is it fun?) comes *before* Phase 5 (art). If feel lived in the
   animation, we couldn't validate it cheaply.
-- **Balance is editing numbers, not redrawing.** A matchup is tuned in the `.tres`,
-  not in LibreSprite.
+- **Balance is editing numbers, not re-rigging.** A matchup is tuned in the `.tres`,
+  not in the Skeleton2D rig.
 - **It's a shared language.** "−6 on block" tells every collaborator the same
   thing. The whole team can reason about a move without playing it.
 
@@ -219,8 +219,8 @@ the exact number.
 | Sweep (cr.HK) | 8 | 3 | 26 | **−12** | hard knockdown | Spacing + whiff-punish → okizeme. Very unsafe; respect it. |
 | Anti-air DP (623, inv 1–5) | 4 | 8 | 30 | **−21** | launch → knockdown | Reversal/anti-air. Invincible startup, catastrophic recovery — the risk/reward anchor. |
 | Overhead | 20 | 2 | 16 | **−4** | + (≈+1) | Must block high; the mix-up vs crouch-blockers. Slow enough to contest. |
-| Projectile (236 — Rainne) | 13 | — | 32 | varies: ~−2 point-blank → ~+4 max range | knockdown / chip | Zoning core; advantage scales with distance (attacker recovers as the ball travels). **Reused by Jacob (3.2).** |
-| Command grab (632146) | 6 | 2 | 26 | n/a — unblockable; lose to jump/backdash | hard knockdown | Cracks turtles; beats block, loses to jump. Rushdown closer (Jerb). |
+| Projectile (236 — Rainne) | 13 | — | 32 | varies: ~−2 point-blank → ~+4 max range | knockdown / chip | Zoning core; advantage scales with distance (attacker recovers as the ball travels). **Built as a reusable system in 3.2 (Rainne is the only projectile user in v1).** |
+| Command grab (632146) | 6 | 2 | 26 | n/a — unblockable; lose to jump/backdash | hard knockdown | Cracks turtles; beats block, loses to jump. Rushdown closer (Jerb); signature tool of the Buno grappler (Jacob, Phase 6). |
 | Jump-in (j.HK) | 8 | 8 | (lands) | + on deep hit | + (≈+4…+8 by height) → combo | Air-to-ground starter; a deep hit buys a full ground combo. Enables offense. |
 
 > Sanity check the archetype contrast (the 3.6 stress test): **Jerb** lives on

@@ -16,7 +16,7 @@ session at this file instead of re-explaining context.
 | `/scenes` | Godot scenes (`.tscn`). |
 | `/scripts` | GDScript (`.gd`) not owned by a single character. |
 | `/characters` | Per-character bundles (states, move lists, stats). |
-| `/art` | Source + exported art (LibreSprite files, spritesheets). |
+| `/art` | Source character art (PNG limb/part images) and Skeleton2D rig assets. |
 | `/data` | Frame-data resources (`.tres`) and other game data. |
 | `/docs` | Shared design/reference docs (this file, art-pipeline, fsm, etc.). |
 
@@ -26,14 +26,13 @@ once a folder has real tracked content.
 ## Asset / binary handling — **no Git LFS (for now)**
 
 We are **not** using Git LFS in v1. Our art is all-black silhouette PNG
-spritesheets — small enough that plain git handles them fine, and LFS adds
-setup friction (every contributor must install `git-lfs`; clones/CI get more
-complex). 
+part images (limbs/body pieces) assembled into Godot Skeleton2D rigs — small
+enough that plain git handles them fine, and LFS adds setup friction (every
+contributor must install `git-lfs`; clones/CI get more complex).
 
-Revisit only if `/art` genuinely balloons (e.g. many large `.ase`/`.aseprite`
-source files or high-res sheets). If we ever do adopt it, track patterns like
-`*.aseprite`, `*.png` under `/art` via `.gitattributes` — but not before it's
-an actual problem.
+Revisit only if `/art` genuinely balloons (e.g. many large high-res part
+images or source files). If we ever do adopt it, track patterns like `*.png`
+under `/art` via `.gitattributes` — but not before it's an actual problem.
 
 ## Branching
 
