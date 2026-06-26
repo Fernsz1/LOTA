@@ -219,7 +219,7 @@ the exact number.
 | Sweep (cr.HK) | 8 | 3 | 26 | **−12** | hard knockdown | Spacing + whiff-punish → okizeme. Very unsafe; respect it. |
 | Anti-air DP (623, inv 1–5) | 4 | 8 | 30 | **−21** | launch → knockdown | Reversal/anti-air. Invincible startup, catastrophic recovery — the risk/reward anchor. |
 | Overhead | 20 | 2 | 16 | **−4** | + (≈+1) | Must block high; the mix-up vs crouch-blockers. Slow enough to contest. |
-| Projectile (236 — Rainne) | 13 | — | 32 | varies: ~−2 point-blank → ~+4 max range | knockdown / chip | Zoning core; advantage scales with distance (attacker recovers as the ball travels). **Built as a reusable system in 3.2 (Rainne is the only projectile user in v1).** |
+| Projectile (236 — Rainne) | 13 | — | 32 | varies: ~−2 point-blank → ~+4 max range | knockdown / chip | Zoning core; advantage scales with distance (attacker recovers as the ball travels). **Built as a generic, reusable system in 3.2 (Rainne's zoning core).** |
 | Command grab (632146) | 6 | 2 | 26 | n/a — unblockable; lose to jump/backdash | hard knockdown | Cracks turtles; beats block, loses to jump. Rushdown closer (Jerb); signature tool of the Buno grappler (Jacob, Phase 6). |
 | Jump-in (j.HK) | 8 | 8 | (lands) | + on deep hit | + (≈+4…+8 by height) → combo | Air-to-ground starter; a deep hit buys a full ground combo. Enables offense. |
 
