@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://bmkrf5josp6lk"]
+
+[ext_resource type="Script" path="res://scripts/character_controller.gd" id="1_ctrl"]
+
+[node name="CharacterBox" type="Node2D"]
+script = ExtResource("1_ctrl")
+
+[node name="Box" type="ColorRect" parent="."]
+offset_left = -20.0
+offset_top = -80.0
+offset_right = 20.0
+offset_bottom = 0.0
+color = Color(1, 1, 1, 1)

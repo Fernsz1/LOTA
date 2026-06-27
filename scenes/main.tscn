@@ -1,9 +1,26 @@
-[gd_scene load_steps=3 format=3 uid="uid://b0lota0main01"]
+[gd_scene format=3 uid="uid://b0lota0main01"]
 
-[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
-[ext_resource type="PackedScene" uid="uid://b0lota0dbgovl1" path="res://scenes/debug_overlay.tscn" id="2_dbgovl"]
+[ext_resource type="Script" uid="uid://c7arkarndwbf8" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="PackedScene" uid="uid://bmkrf5kiynq8k" path="res://scenes/debug_overlay.tscn" id="2_dbgovl"]
+[ext_resource type="PackedScene" uid="uid://bmkrf5josp6lk" path="res://scenes/character_box.tscn" id="3_charbox"]
 
-[node name="Main" type="Node2D"]
+[node name="Main" type="Node2D" unique_id=175851764]
 script = ExtResource("1_main")
 
-[node name="DebugOverlay" parent="." instance=ExtResource("2_dbgovl")]
+[node name="Floor" type="ColorRect" parent="." unique_id=180430301]
+offset_top = 560.0
+offset_right = 1147.0
+offset_bottom = 570.0
+color = Color(0.25, 0.25, 0.25, 1)
+
+[node name="P1" parent="." unique_id=841665642 instance=ExtResource("3_charbox")]
+position = Vector2(400, 560)
+box_color = Color(0.2, 0.5, 0.9, 1)
+
+[node name="P2" parent="." unique_id=1624087936 instance=ExtResource("3_charbox")]
+position = Vector2(880, 560)
+player_index = 2
+facing = -1
+box_color = Color(0.9, 0.25, 0.2, 1)
+
+[node name="DebugOverlay" parent="." unique_id=2021885996 instance=ExtResource("2_dbgovl")]
