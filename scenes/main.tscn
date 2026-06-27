@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3 uid="uid://b0lota0main01"]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="PackedScene" uid="uid://b0lota0dbgovl1" path="res://scenes/debug_overlay.tscn" id="2_dbgovl"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="DebugOverlay" parent="." instance=ExtResource("2_dbgovl")]
