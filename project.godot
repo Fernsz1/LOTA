@@ -20,6 +20,10 @@ run/main_scene="res://scenes/main.tscn"
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/gut/plugin.cfg")
+
 [physics]
 
 common/physics_ticks_per_second=60
