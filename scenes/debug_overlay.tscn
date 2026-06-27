@@ -1,0 +1,37 @@
+[gd_scene load_steps=2 format=3 uid="uid://b0lota0dbgovl1"]
+
+[ext_resource type="Script" path="res://scripts/debug_overlay.gd" id="1_dbgovl"]
+
+[node name="DebugOverlay" type="CanvasLayer"]
+script = ExtResource("1_dbgovl")
+
+[node name="Panel" type="PanelContainer" parent="."]
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+
+[node name="Frame" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "frame 0"
+
+[node name="FPS" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "fps   0"
+
+[node name="P1State" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "P1  —"
+
+[node name="P2State" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "P2  —"
+
+[node name="P1Input" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+
+[node name="P2Input" type="Label" parent="Panel/VBox"]
+layout_mode = 2
