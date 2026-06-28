@@ -197,3 +197,10 @@ spaces itself out. Stun lasts `move.hitstun` / `move.blockstun` frames, then →
   drawn for debug — invuln is enforced in resolution, not by hiding the box.
 - The three reactions are distinct states with distinct durations/pushback: `HITSTUN`
   (got hit), `BLOCKSTUN` (guarded), `KNOCKDOWN` (launched / hard knockdown).
+
+> **Known limitation (intentional for the 2.x milestone).** A grounded `KNOCKDOWN`
+> fighter is **not** invulnerable, so a move can re-hit it on the floor — repeated
+> knockdowns chain into an OTG ("off-the-ground") re-knockdown loop. This is okizeme /
+> juggle-limit territory, deferred to the cancel/juggle system (3.5) and the balance
+> pass (8.2). It does not block "a round can be won and lost". When addressed, the fix
+> is a per-combo juggle/OTG limit or brief knockdown invuln — not a structural change.
