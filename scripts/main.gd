@@ -23,8 +23,41 @@ func _ready() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	_update_facing()      # fresh facing first: combat reads back-direction + mirrors boxes
+	_resolve_combat()
 	_resolve_pushboxes()
-	_update_facing()
+
+
+# Detect and resolve hits this frame (2.4). Runs after both controllers have moved
+# (priority 1). While either fighter is frozen (hitstop) nothing resolves. Both
+# attack directions are checked so a trade lands for both sides.
+func _resolve_combat() -> void:
+	if _p1.is_frozen() or _p2.is_frozen():
+		return
+	_try_hit(_p1, _p2)
+	_try_hit(_p2, _p1)
+
+
+func _try_hit(attacker: CharacterController, defender: CharacterController) -> void:
+	var move: MoveData = attacker.get_active_move()
+	if move == null:
+		return
+	var overlapping: bool = CombatBoxes.overlaps(attacker.get_hitboxes(), defender.get_hurtboxes())
+	var guarding: bool = HitResolver.is_guarding(defender.fsm_state(), defender.is_holding_back())
+	var outcome: int = HitResolver.classify(overlapping, defender.is_invulnerable(), guarding)
+	if outcome == HitResolver.Outcome.NONE:
+		return
+
+	attacker.mark_move_hit()                                  # one hit per attack
+	attacker.apply_hitstop(move.hitstop)                      # freeze BOTH (feel-reference §4)
+	defender.apply_hitstop(move.hitstop)
+	var push_dir: float = signf(defender.position.x - attacker.position.x)
+	if push_dir == 0.0:
+		push_dir = float(attacker.facing)                    # perfectly overlapped → use facing
+	if outcome == HitResolver.Outcome.BLOCK:
+		defender.apply_block(move, push_dir)
+	else:
+		defender.apply_hit(move, push_dir)
 
 
 # Prevent horizontal overlap by pushing characters apart along X.

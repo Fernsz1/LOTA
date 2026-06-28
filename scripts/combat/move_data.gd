@@ -20,6 +20,7 @@ extends Resource
 @export var hitstop: int = 0                 # applied before hitstun (feel-reference §4)
 @export var pushback_hit: float = 0.0        # px/frame
 @export var pushback_block: float = 0.0      # px/frame; block ≥ hit
+@export var causes_knockdown: bool = false   # 2.5: on hit, force KNOCKDOWN instead of HITSTUN
 
 ## Total length; spans are disjoint so it's a clean sum (feel-reference §3).
 func total() -> int:
