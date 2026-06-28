@@ -1,11 +1,12 @@
 class_name CharacterController
 extends Node2D
-## Phase 1.4 — translates per-player InputBuffer into FSM transitions and applies
-## frame-unit physics (px/frame — never delta). Stage bounds and player-vs-player
-## pushboxes are added in 1.5.
+## Phase 1.4/1.5 — translates per-player InputBuffer into FSM transitions and applies
+## frame-unit physics (px/frame — never delta). Pushbox separation and facing updates
+## live in main.gd (_physics_process priority 1, runs after both controllers).
 
 # --- Movement constants (px/frame or frames; tune at 3.6 GO/NO-GO) ---
 const WALK_SPEED: float = 5.0
+const WALK_B_SPEED: float = 4.5       # slower than walk forward
 const JUMP_VELOCITY: float = -13.0    # up is negative in Godot 2D
 const GRAVITY: float = 0.565          # → ~46-frame airtime (feel-reference §5)
 const JUMP_F_SPEED: float = 3.5       # horizontal speed on forward/back jump
@@ -16,6 +17,8 @@ const DASH_TOTAL: int = 16
 const BACKDASH_SPEED: float = 7.0     # applied in -facing direction
 const BACKDASH_TOTAL: int = 20        # feel-reference §5
 const DOUBLE_TAP_WINDOW: int = 8      # frames between two directional taps → dash
+const PUSH_W: float = 40.0            # pushbox width — must match visual box width
+const PUSH_H: float = 80.0            # pushbox height — must match visual box height
 
 @export var player_index: int = 1
 @export var facing: int = 1           # 1 = right, -1 = left
@@ -32,6 +35,8 @@ var _fwd_tap_timer: int = 999
 var _bwd_tap_timer: int = 999
 var _prev_fwd: bool = false
 var _prev_bwd: bool = false
+var _prev_down: bool = false
+var _down_tap_timer: int = 999
 
 var _overlay: Node = null
 
@@ -98,15 +103,20 @@ func _process_input(buf: InputBuffer) -> void:
 
 	var fwd_held: bool = buf.is_held(fwd_bit)
 	var bwd_held: bool = buf.is_held(bwd_bit)
+	var down_held: bool = buf.is_held(InputBuffer.DOWN)
 	var fwd_rising: bool = fwd_held and not _prev_fwd
 	var bwd_rising: bool = bwd_held and not _prev_bwd
+	var down_rising: bool = down_held and not _prev_down
 	_prev_fwd = fwd_held
 	_prev_bwd = bwd_held
+	_prev_down = down_held
 
 	if _fwd_tap_timer < 999:
 		_fwd_tap_timer += 1
 	if _bwd_tap_timer < 999:
 		_bwd_tap_timer += 1
+	if _down_tap_timer < 999:
+		_down_tap_timer += 1
 
 	# Air control: steer horizontal velocity while airborne without changing FSM state.
 	if CharacterStateMachine.is_airborne(_fsm.state):
@@ -134,10 +144,22 @@ func _process_input(buf: InputBuffer) -> void:
 			return
 		_bwd_tap_timer = 0
 
+	# Double-tap down → enter BLOCK. Second tap can be a press or held.
+	if down_rising:
+		if _down_tap_timer <= DOUBLE_TAP_WINDOW:
+			if _fsm.request(CharacterStateMachine.State.BLOCK):
+				_down_tap_timer = 999
+				return
+		_down_tap_timer = 0
+
+	# Stay in BLOCK while down is still held after entering via double-tap.
+	if _fsm.state == CharacterStateMachine.State.BLOCK and down_held:
+		return
+
 	# Normal ground movement (4-frame action buffer on jump).
 	if buf.pressed_within(InputBuffer.UP, 4):
 		_fsm.request(CharacterStateMachine.State.JUMP_START)
-	elif buf.is_held(InputBuffer.DOWN):
+	elif down_held:
 		_fsm.request(CharacterStateMachine.State.CROUCH)
 	elif fwd_held:
 		_fsm.request(CharacterStateMachine.State.WALK_F)
@@ -155,7 +177,7 @@ func _apply_movement() -> void:
 			_vel.x = WALK_SPEED * facing
 			_vel.y = 0.0
 		CharacterStateMachine.State.WALK_B:
-			_vel.x = -WALK_SPEED * facing
+			_vel.x = -WALK_B_SPEED * facing
 			_vel.y = 0.0
 		CharacterStateMachine.State.DASH:
 			_vel.x = DASH_SPEED * facing
@@ -180,7 +202,13 @@ func _apply_movement() -> void:
 	else:
 		position.y = minf(position.y, _floor_y)
 
-	position.x = clampf(position.x, _left_x, _right_x)
+	# Keep the character fully inside stage walls (centre ± half-width).
+	position.x = clampf(position.x, _left_x + PUSH_W * 0.5, _right_x - PUSH_W * 0.5)
+
+
+## World-space pushbox for 1.5 separation. X-only overlap is checked by main.gd.
+func get_pushbox() -> Rect2:
+	return Rect2(position.x - PUSH_W * 0.5, position.y - PUSH_H, PUSH_W, PUSH_H)
 
 
 func _update_debug() -> void:
