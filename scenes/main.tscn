@@ -4,6 +4,10 @@
 [ext_resource type="PackedScene" uid="uid://bmkrf5kiynq8k" path="res://scenes/debug_overlay.tscn" id="2_dbgovl"]
 [ext_resource type="PackedScene" uid="uid://bmkrf5josp6lk" path="res://scenes/character_box.tscn" id="3_charbox"]
 [ext_resource type="Script" path="res://scripts/combat/combat_debug.gd" id="4_dbgbox"]
+[ext_resource type="Resource" path="res://characters/jerb/moves/jab.tres" id="5_jab"]
+[ext_resource type="Resource" path="res://characters/jerb/moves/heavy.tres" id="6_heavy"]
+[ext_resource type="PackedScene" path="res://scenes/match_hud.tscn" id="7_mhud"]
+[ext_resource type="Script" path="res://scripts/match/match_manager.gd" id="8_mmgr"]
 
 [node name="Main" type="Node2D" unique_id=175851764]
 script = ExtResource("1_main")
@@ -17,15 +21,27 @@ color = Color(0.25, 0.25, 0.25, 1)
 [node name="P1" parent="." unique_id=841665642 instance=ExtResource("3_charbox")]
 position = Vector2(400, 560)
 box_color = Color(0.2, 0.5, 0.9, 1)
+move_fast = ExtResource("5_jab")
+move_heavy = ExtResource("6_heavy")
 
 [node name="P2" parent="." unique_id=1624087936 instance=ExtResource("3_charbox")]
 position = Vector2(880, 560)
 player_index = 2
 facing = -1
 box_color = Color(0.9, 0.25, 0.2, 1)
+move_fast = ExtResource("5_jab")
+move_heavy = ExtResource("6_heavy")
 
 [node name="CombatDebug" type="Node2D" parent="."]
 script = ExtResource("4_dbgbox")
 players = [NodePath("../P1"), NodePath("../P2")]
 
 [node name="DebugOverlay" parent="." unique_id=2021885996 instance=ExtResource("2_dbgovl")]
+
+[node name="MatchHUD" parent="." instance=ExtResource("7_mhud")]
+
+[node name="MatchManager" type="Node" parent="."]
+script = ExtResource("8_mmgr")
+p1_path = NodePath("../P1")
+p2_path = NodePath("../P2")
+hud_path = NodePath("../MatchHUD")

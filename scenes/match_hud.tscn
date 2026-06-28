@@ -1,0 +1,65 @@
+[gd_scene load_steps=2 format=3 uid="uid://b0lota0mtchhud1"]
+
+[ext_resource type="Script" path="res://scripts/match_hud.gd" id="1_mhud"]
+
+[node name="MatchHUD" type="CanvasLayer"]
+script = ExtResource("1_mhud")
+
+[node name="P1Bar" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 30.0
+offset_right = 520.0
+offset_bottom = 58.0
+color = Color(0.1, 0.1, 0.1, 0.7)
+
+[node name="Fill" type="ColorRect" parent="P1Bar"]
+offset_right = 480.0
+offset_bottom = 28.0
+color = Color(0.3, 0.8, 0.35, 1)
+
+[node name="P2Bar" type="ColorRect" parent="."]
+offset_left = 760.0
+offset_top = 30.0
+offset_right = 1240.0
+offset_bottom = 58.0
+color = Color(0.1, 0.1, 0.1, 0.7)
+
+[node name="Fill" type="ColorRect" parent="P2Bar"]
+offset_right = 480.0
+offset_bottom = 28.0
+color = Color(0.3, 0.8, 0.35, 1)
+
+[node name="Timer" type="Label" parent="."]
+offset_left = 590.0
+offset_top = 26.0
+offset_right = 690.0
+offset_bottom = 70.0
+theme_override_font_sizes/font_size = 36
+text = "99"
+horizontal_alignment = 1
+
+[node name="P1Rounds" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 62.0
+offset_right = 520.0
+offset_bottom = 90.0
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 24
+
+[node name="P2Rounds" type="Label" parent="."]
+offset_left = 760.0
+offset_top = 62.0
+offset_right = 1240.0
+offset_bottom = 90.0
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 2
+
+[node name="Announce" type="Label" parent="."]
+offset_left = 340.0
+offset_top = 240.0
+offset_right = 940.0
+offset_bottom = 320.0
+theme_override_font_sizes/font_size = 64
+horizontal_alignment = 1
+vertical_alignment = 1
