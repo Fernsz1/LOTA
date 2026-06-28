@@ -25,6 +25,8 @@ const PUSH_H: float = 80.0            # pushbox height — must match visual box
 @export var box_color: Color = Color(1, 1, 1, 1)
 @export var move_fast: MoveData       # 2.3 — light attack frame data (jab)
 @export var move_heavy: MoveData      # 2.3 — heavy attack frame data (knockdown)
+@export var move_skill: MoveData      # 3.1 — skill attack frame data
+@export var move_ultimate: MoveData   # 3.1 — ultimate attack frame data
 
 var _fsm: CharacterStateMachine = CharacterStateMachine.new()
 var _vel: Vector2 = Vector2.ZERO
@@ -165,11 +167,24 @@ func _process_input(buf: InputBuffer) -> void:
 	if not CharacterStateMachine.is_actionable(_fsm.state):
 		return
 
-	# Attacks (2.3) — buffered presses, checked while actionable. Heavy wins ties.
+	# Attacks (2.3) — buffered presses, checked while actionable. Priority: Ultimate > Heavy > Skill > Fast.
 	# On a successful start, arm the move and clear the one-hit latch.
+	# NOTE: Treating ultimate as a second SKILL slot to avoid changing FSM structure (Phase 3.1 constraint).
+	if move_ultimate != null and buf.pressed_within(InputBuffer.ULTIMATE, ATTACK_BUFFER) \
+			and _fsm.request(CharacterStateMachine.State.SKILL):
+		_current_move = move_ultimate
+		_move_has_hit = false
+		return
 	if move_heavy != null and buf.pressed_within(InputBuffer.HEAVY, ATTACK_BUFFER) \
 			and _fsm.request(CharacterStateMachine.State.HEAVY_ATTACK):
 		_current_move = move_heavy
+		_move_has_hit = false
+		return
+	if move_skill != null and buf.pressed_within(InputBuffer.SKILL, ATTACK_BUFFER) \
+			and _fsm.request(CharacterStateMachine.State.SKILL):
+		# TODO(3.5): skill.tres is currently a single 120-damage hit. Multi-hit behavior 
+		# (3 hits) will need the cancel system (3.5) to chain properly.
+		_current_move = move_skill
 		_move_has_hit = false
 		return
 	if move_fast != null and buf.pressed_within(InputBuffer.FAST, ATTACK_BUFFER) \
