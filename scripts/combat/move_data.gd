@@ -35,7 +35,10 @@ func is_active(frame_in_state: int) -> bool:
 ## Local-space hitboxes live this frame (empty otherwise). The stable seam: storage
 ## can change later (multi-hit) without callers changing.
 func hitboxes_at(frame_in_state: int) -> Array[Rect2]:
-	return hitboxes if is_active(frame_in_state) else []
+	if is_active(frame_in_state):
+		return hitboxes
+	var empty: Array[Rect2] = []
+	return empty
 
 ## Derived frame advantage assuming a first-active-frame contact (feel-reference §3).
 ## Hitstop cancels out (freezes both) and is ignored.
