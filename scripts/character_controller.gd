@@ -43,7 +43,7 @@ var _prev_bwd: bool = false
 # --- Combat state (2.3–2.6) ---
 const MAX_HEALTH: int = 1000
 const ATTACK_BUFFER: int = 4          # frames of input buffer on attack press (feel-reference §4)
-const KNOCKDOWN_FRAMES: int = 40      # time face-down before getup (2.5)
+const KNOCKDOWN_FRAMES: int = 80      # time face-down before getup (2.5)
 const GETUP_FRAMES: int = 16          # wake-up; invulnerable throughout (2.5)
 const PUSHBACK_DECAY: float = 0.85    # per-frame pushback falloff (2.4 — blockstrings self-space)
 var health: int = MAX_HEALTH
@@ -123,12 +123,18 @@ func _resolve_busy_exits(buf: InputBuffer) -> void:
 		CharacterStateMachine.State.SKILL:
 			# Locked through the move's full length (2.3); then actionable again.
 			if _current_move == null or _fsm.frame_in_state >= _current_move.total():
-				_fsm.request(CharacterStateMachine.State.IDLE)
+				if position.y < _floor_y:
+					_fsm.request(CharacterStateMachine.State.JUMP_AIR)
+				else:
+					_fsm.request(CharacterStateMachine.State.IDLE)
 		CharacterStateMachine.State.HITSTUN, CharacterStateMachine.State.BLOCKSTUN:
 			if _fsm.frame_in_state >= _stun_frames:        # 2.4 stun length
-				_fsm.request(CharacterStateMachine.State.IDLE)
+				if position.y < _floor_y:
+					_fsm.request(CharacterStateMachine.State.JUMP_AIR)
+				else:
+					_fsm.request(CharacterStateMachine.State.IDLE)
 		CharacterStateMachine.State.KNOCKDOWN:
-			if _fsm.frame_in_state >= KNOCKDOWN_FRAMES:     # 2.5
+			if _fsm.frame_in_state >= KNOCKDOWN_FRAMES and position.y >= _floor_y:
 				_fsm.request(CharacterStateMachine.State.GETUP)
 		CharacterStateMachine.State.GETUP:
 			if _fsm.frame_in_state >= GETUP_FRAMES:         # 2.5 (invuln window)
@@ -242,13 +248,21 @@ func _apply_movement() -> void:
 		CharacterStateMachine.State.JUMP_B:
 			_vel.y += GRAVITY   # horizontal vel preserved from jump launch
 		CharacterStateMachine.State.HITSTUN, CharacterStateMachine.State.BLOCKSTUN:
-			# Pushback (2.4): slide away from the attacker, decaying so a blocked
-			# string spaces itself out of range (feel-reference §4).
+			# Pushback (2.4): slide away from the attacker, decaying
 			_vel.x = _pushback_vel
-			_vel.y = 0.0
+			if position.y < _floor_y:
+				_vel.y += GRAVITY
+			else:
+				_vel.y = 0.0
 			_pushback_vel *= PUSHBACK_DECAY
+		CharacterStateMachine.State.KNOCKDOWN:
+			if position.y < _floor_y:
+				_vel.y += GRAVITY
+			else:
+				_vel.y = 0.0
+			_vel.x = 0.0
 		_:
-			# IDLE, CROUCH, BLOCK, JUMP_START, JUMP_LAND, KNOCKDOWN, GETUP — no lateral movement.
+			# IDLE, CROUCH, BLOCK, JUMP_START, JUMP_LAND, GETUP — no lateral movement.
 			_vel.x = 0.0
 
 	position += _vel
@@ -351,7 +365,7 @@ func apply_hit(move: MoveData, push_dir: float) -> void:
 	health = maxi(0, health - move.damage)
 	_stun_frames = move.hitstun
 	_pushback_vel = move.pushback_hit * push_dir
-	if move.causes_knockdown or CharacterStateMachine.is_airborne(_fsm.state):
+	if move.causes_knockdown:
 		_fsm.on_launched()   # → KNOCKDOWN
 	else:
 		_fsm.on_hit()        # → HITSTUN
