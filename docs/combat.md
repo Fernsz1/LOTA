@@ -149,3 +149,51 @@ later **without touching single-hit moves or callers**: add an optional
 `hitboxes_at()` prefer it when non-empty, falling back to the flat `hitboxes`.
 Because every consumer already reads through `is_active()` / `hitboxes_at()`, the
 seam absorbs the change.
+
+---
+
+## 3. Attack states & hit resolution (2.3 / 2.4)
+
+### Attack states (2.3)
+
+A pressed attack button (`FAST` / `HEAVY`, buffered `ATTACK_BUFFER = 4` frames) while
+actionable enters `FAST_ATTACK` / `HEAVY_ATTACK` and arms `_current_move` (a `MoveData`
+assigned per-fighter via `@export move_fast` / `move_heavy` in `main.tscn`). Then, in
+`character_controller.gd`:
+
+- `_resolve_attack()` sets `active_hitboxes_local = _current_move.hitboxes_at(frame_in_state)`
+  — hitboxes are live **only** on the move's active frames, empty otherwise.
+- `_resolve_busy_exits` locks the character until `frame_in_state >= _current_move.total()`,
+  then returns to `IDLE` (recovery is real — the move can't be cancelled in v1).
+- `_move_has_hit` latches so one attack lands **at most one hit** (it survives the
+  hitstop freeze); it clears when the next attack starts. `SKILL` is unbound for now.
+
+### Hit resolution (2.4)
+
+`main.gd._resolve_combat()` runs at physics priority 1 (after both controllers moved),
+both attack directions, and **skips entirely while either fighter is frozen** (hitstop):
+
+1. `attacker.get_active_move()` → the move whose hitbox can connect (null if none / already hit).
+2. `CombatBoxes.overlaps(attacker hitboxes, defender hurtboxes)` (the 2.1 layer).
+3. `HitResolver.classify(overlapping, defender.is_invulnerable(), guarding)` → `NONE / HIT / BLOCK`.
+   - **Block model is hold-back** (2.4 decision — there is no block button): `HitResolver.is_guarding`
+     = the defender is in an actionable ground state **and** holding the away-from-attacker
+     direction. Stand-block (`WALK_B`) and crouch-block (`CROUCH`) both guard every v1 mid.
+4. Apply: `apply_hitstop(move.hitstop)` to **both** (freeze), then `apply_block` (no damage,
+   blockstun, more pushback) or `apply_hit` (damage, hitstun, pushback).
+
+**Hitstop** pauses the whole character — input, movement, **and** `frame_in_state` — so the
+impact freeze never counts as stun (feel-reference §4/§7). **Pushback** is `pushback_hit/block`
+px/frame applied during `HITSTUN`/`BLOCKSTUN`, decaying by `PUSHBACK_DECAY` so a blocked string
+spaces itself out. Stun lasts `move.hitstun` / `move.blockstun` frames, then → `IDLE`.
+
+## 4. Knockdown, getup & reactions (2.5)
+
+- A move with `causes_knockdown = true` (e.g. `heavy.tres`), or **any hit on an airborne
+  defender**, forces `KNOCKDOWN` instead of `HITSTUN` (`apply_hit` → `on_launched()`).
+- `KNOCKDOWN` (`KNOCKDOWN_FRAMES = 40`) → `GETUP` (`GETUP_FRAMES = 16`) → `IDLE`.
+- **Wake-up invulnerability**: `is_invulnerable()` is true during `GETUP` (and `KO`); the
+  resolver early-outs, so a meaty attack on a getting-up defender whiffs. Hurtboxes stay
+  drawn for debug — invuln is enforced in resolution, not by hiding the box.
+- The three reactions are distinct states with distinct durations/pushback: `HITSTUN`
+  (got hit), `BLOCKSTUN` (guarded), `KNOCKDOWN` (launched / hard knockdown).
