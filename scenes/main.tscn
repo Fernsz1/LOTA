@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://c7arkarndwbf8" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" uid="uid://bmkrf5kiynq8k" path="res://scenes/debug_overlay.tscn" id="2_dbgovl"]
 [ext_resource type="PackedScene" uid="uid://bmkrf5josp6lk" path="res://scenes/character_box.tscn" id="3_charbox"]
+[ext_resource type="Script" path="res://scripts/combat/combat_debug.gd" id="4_dbgbox"]
 
 [node name="Main" type="Node2D" unique_id=175851764]
 script = ExtResource("1_main")
@@ -22,5 +23,9 @@ position = Vector2(880, 560)
 player_index = 2
 facing = -1
 box_color = Color(0.9, 0.25, 0.2, 1)
+
+[node name="CombatDebug" type="Node2D" parent="."]
+script = ExtResource("4_dbgbox")
+players = [NodePath("../P1"), NodePath("../P2")]
 
 [node name="DebugOverlay" parent="." unique_id=2021885996 instance=ExtResource("2_dbgovl")]

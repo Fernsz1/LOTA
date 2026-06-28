@@ -61,6 +61,7 @@ func _physics_process(_delta: float) -> void:
 	var buf: InputBuffer = InputManager.get_buffer(player_index)
 	_resolve_busy_exits(buf)
 	_process_input(buf)
+	_drive_test_hitbox(buf)   # TEMP (2.1) — remove when 2.3 attack states land
 	_apply_movement()
 	_update_debug()
 	_fsm.tick()
@@ -211,7 +212,40 @@ func get_pushbox() -> Rect2:
 	return Rect2(position.x - PUSH_W * 0.5, position.y - PUSH_H, PUSH_W, PUSH_H)
 
 
+# --- Combat boxes (2.1) — local, facing-right; origin at feet (bottom-centre) ---
+const HURTBOX_STAND: Rect2 = Rect2(-20, -80, 40, 80)   # matches the visual Box
+const HURTBOX_CROUCH: Rect2 = Rect2(-20, -52, 40, 52)  # shorter while crouching
+
+# Live hitboxes in local space. Empty in the common case → overlap checks stay cheap.
+# Set by the attack state in 2.3; until then the TEMP block below drives a test box.
+var active_hitboxes_local: Array[Rect2] = []
+
+## World-space hurtbox set for the current stance (one box in v1; multi-box bodies later).
+func get_hurtboxes() -> Array[Rect2]:
+	var local: Rect2 = HURTBOX_CROUCH if _fsm.state == CharacterStateMachine.State.CROUCH \
+		else HURTBOX_STAND
+	return [CombatBoxes.to_world(local, position, facing)]
+
+## World-space active hitboxes — empty when not attacking (cheap early-out for callers).
+func get_hitboxes() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for h in active_hitboxes_local:
+		out.append(CombatBoxes.to_world(h, position, facing))
+	return out
+
+
 func _update_debug() -> void:
 	if _overlay == null:
 		return
 	_overlay.set_state(player_index, CharacterStateMachine.State.keys()[_fsm.state])
+
+
+# --- TEMP (2.1 verification) — replaced by real frame-data attack states in 2.3. ---
+# Hold FAST while actionable to spawn a test hitbox so rendering + overlap detection
+# can be checked live. DELETE this whole block (and the call above) in 2.3.
+const _TEST_HITBOX: Rect2 = Rect2(20, -64, 36, 20)
+func _drive_test_hitbox(buf: InputBuffer) -> void:
+	if CharacterStateMachine.is_actionable(_fsm.state) and buf.is_held(InputBuffer.FAST):
+		active_hitboxes_local = [_TEST_HITBOX]
+	else:
+		active_hitboxes_local = []
