@@ -23,6 +23,8 @@ const PUSH_H: float = 80.0            # pushbox height — must match visual box
 @export var player_index: int = 1
 @export var facing: int = 1           # 1 = right, -1 = left
 @export var box_color: Color = Color(1, 1, 1, 1)
+@export var move_fast: MoveData       # 2.3 — light attack frame data (jab)
+@export var move_heavy: MoveData      # 2.3 — heavy attack frame data (knockdown)
 
 var _fsm: CharacterStateMachine = CharacterStateMachine.new()
 var _vel: Vector2 = Vector2.ZERO
@@ -35,8 +37,19 @@ var _fwd_tap_timer: int = 999
 var _bwd_tap_timer: int = 999
 var _prev_fwd: bool = false
 var _prev_bwd: bool = false
-var _prev_down: bool = false
-var _down_tap_timer: int = 999
+
+# --- Combat state (2.3–2.6) ---
+const MAX_HEALTH: int = 1000
+const ATTACK_BUFFER: int = 4          # frames of input buffer on attack press (feel-reference §4)
+const KNOCKDOWN_FRAMES: int = 40      # time face-down before getup (2.5)
+const GETUP_FRAMES: int = 16          # wake-up; invulnerable throughout (2.5)
+const PUSHBACK_DECAY: float = 0.85    # per-frame pushback falloff (2.4 — blockstrings self-space)
+var health: int = MAX_HEALTH
+var _current_move: MoveData = null    # the move the active attack state is reading
+var _move_has_hit: bool = false       # one hit per attack: cleared when a new attack starts
+var _hitstop: int = 0                 # impact freeze; pauses everything incl. frame_in_state
+var _stun_frames: int = 0             # length of the current HITSTUN/BLOCKSTUN
+var _pushback_vel: float = 0.0        # px/frame applied during a reaction, decaying
 
 var _overlay: Node = null
 
@@ -52,16 +65,26 @@ func setup(floor_y: float, left_x: float, right_x: float, overlay: Node) -> void
 
 func _ready() -> void:
 	_box.color = box_color
+	# Validate frame data on load (conventions: validate with assert/push_error).
+	if move_fast != null:
+		move_fast.validate()
+	if move_heavy != null:
+		move_heavy.validate()
 	# Tell Godot the scene-file position is the true starting point — prevents the
 	# interpolator from visually sliding in from the origin on the first frame.
 	reset_physics_interpolation()
 
 
 func _physics_process(_delta: float) -> void:
+	# Hitstop (2.4): freeze the whole character — input, movement, and frame_in_state —
+	# so the impact freeze never counts as stun (feel-reference §4/§7).
+	if _hitstop > 0:
+		_hitstop -= 1
+		return
 	var buf: InputBuffer = InputManager.get_buffer(player_index)
 	_resolve_busy_exits(buf)
 	_process_input(buf)
-	_drive_test_hitbox(buf)   # TEMP (2.1) — remove when 2.3 attack states land
+	_resolve_attack()
 	_apply_movement()
 	_update_debug()
 	_fsm.tick()
@@ -94,6 +117,20 @@ func _resolve_busy_exits(buf: InputBuffer) -> void:
 		CharacterStateMachine.State.BACKDASH:
 			if _fsm.frame_in_state >= BACKDASH_TOTAL:
 				_fsm.request(CharacterStateMachine.State.IDLE)
+		CharacterStateMachine.State.FAST_ATTACK, CharacterStateMachine.State.HEAVY_ATTACK, \
+		CharacterStateMachine.State.SKILL:
+			# Locked through the move's full length (2.3); then actionable again.
+			if _current_move == null or _fsm.frame_in_state >= _current_move.total():
+				_fsm.request(CharacterStateMachine.State.IDLE)
+		CharacterStateMachine.State.HITSTUN, CharacterStateMachine.State.BLOCKSTUN:
+			if _fsm.frame_in_state >= _stun_frames:        # 2.4 stun length
+				_fsm.request(CharacterStateMachine.State.IDLE)
+		CharacterStateMachine.State.KNOCKDOWN:
+			if _fsm.frame_in_state >= KNOCKDOWN_FRAMES:     # 2.5
+				_fsm.request(CharacterStateMachine.State.GETUP)
+		CharacterStateMachine.State.GETUP:
+			if _fsm.frame_in_state >= GETUP_FRAMES:         # 2.5 (invuln window)
+				_fsm.request(CharacterStateMachine.State.IDLE)
 
 
 # Translate held/pressed bits from the buffer into FSM requests.
@@ -107,17 +144,13 @@ func _process_input(buf: InputBuffer) -> void:
 	var down_held: bool = buf.is_held(InputBuffer.DOWN)
 	var fwd_rising: bool = fwd_held and not _prev_fwd
 	var bwd_rising: bool = bwd_held and not _prev_bwd
-	var down_rising: bool = down_held and not _prev_down
 	_prev_fwd = fwd_held
 	_prev_bwd = bwd_held
-	_prev_down = down_held
 
 	if _fwd_tap_timer < 999:
 		_fwd_tap_timer += 1
 	if _bwd_tap_timer < 999:
 		_bwd_tap_timer += 1
-	if _down_tap_timer < 999:
-		_down_tap_timer += 1
 
 	# Air control: steer horizontal velocity while airborne without changing FSM state.
 	if CharacterStateMachine.is_airborne(_fsm.state):
@@ -130,6 +163,19 @@ func _process_input(buf: InputBuffer) -> void:
 		return
 
 	if not CharacterStateMachine.is_actionable(_fsm.state):
+		return
+
+	# Attacks (2.3) — buffered presses, checked while actionable. Heavy wins ties.
+	# On a successful start, arm the move and clear the one-hit latch.
+	if move_heavy != null and buf.pressed_within(InputBuffer.HEAVY, ATTACK_BUFFER) \
+			and _fsm.request(CharacterStateMachine.State.HEAVY_ATTACK):
+		_current_move = move_heavy
+		_move_has_hit = false
+		return
+	if move_fast != null and buf.pressed_within(InputBuffer.FAST, ATTACK_BUFFER) \
+			and _fsm.request(CharacterStateMachine.State.FAST_ATTACK):
+		_current_move = move_fast
+		_move_has_hit = false
 		return
 
 	# Double-tap check — fires before single-direction walk so a second tap dashes.
@@ -145,17 +191,8 @@ func _process_input(buf: InputBuffer) -> void:
 			return
 		_bwd_tap_timer = 0
 
-	# Double-tap down → enter BLOCK. Second tap can be a press or held.
-	if down_rising:
-		if _down_tap_timer <= DOUBLE_TAP_WINDOW:
-			if _fsm.request(CharacterStateMachine.State.BLOCK):
-				_down_tap_timer = 999
-				return
-		_down_tap_timer = 0
-
-	# Stay in BLOCK while down is still held after entering via double-tap.
-	if _fsm.state == CharacterStateMachine.State.BLOCK and down_held:
-		return
+	# Blocking is hold-back (2.4): holding away yields WALK_B / CROUCH (both block-capable),
+	# and the guard is resolved at hit-time by HitResolver — no dedicated block input.
 
 	# Normal ground movement (4-frame action buffer on jump).
 	if buf.pressed_within(InputBuffer.UP, 4):
@@ -189,8 +226,14 @@ func _apply_movement() -> void:
 		CharacterStateMachine.State.JUMP_AIR, CharacterStateMachine.State.JUMP_F, \
 		CharacterStateMachine.State.JUMP_B:
 			_vel.y += GRAVITY   # horizontal vel preserved from jump launch
+		CharacterStateMachine.State.HITSTUN, CharacterStateMachine.State.BLOCKSTUN:
+			# Pushback (2.4): slide away from the attacker, decaying so a blocked
+			# string spaces itself out of range (feel-reference §4).
+			_vel.x = _pushback_vel
+			_vel.y = 0.0
+			_pushback_vel *= PUSHBACK_DECAY
 		_:
-			# IDLE, CROUCH, BLOCK, JUMP_START, JUMP_LAND, reactions — no lateral movement.
+			# IDLE, CROUCH, BLOCK, JUMP_START, JUMP_LAND, KNOCKDOWN, GETUP — no lateral movement.
 			_vel.x = 0.0
 
 	position += _vel
@@ -240,12 +283,84 @@ func _update_debug() -> void:
 	_overlay.set_state(player_index, CharacterStateMachine.State.keys()[_fsm.state])
 
 
-# --- TEMP (2.1 verification) — replaced by real frame-data attack states in 2.3. ---
-# Hold FAST while actionable to spawn a test hitbox so rendering + overlap detection
-# can be checked live. DELETE this whole block (and the call above) in 2.3.
-const _TEST_HITBOX: Rect2 = Rect2(20, -64, 36, 20)
-func _drive_test_hitbox(buf: InputBuffer) -> void:
-	if CharacterStateMachine.is_actionable(_fsm.state) and buf.is_held(InputBuffer.FAST):
-		active_hitboxes_local = [_TEST_HITBOX]
+# --- Attack hitboxes (2.3) — driven by the current move's frame data ---
+# Live only on the move's active frames (MoveData.hitboxes_at); empty otherwise so
+# overlap checks stay cheap. Replaces the 2.1 temp test driver.
+func _resolve_attack() -> void:
+	if _current_move != null and CharacterStateMachine.is_attacking(_fsm.state):
+		active_hitboxes_local = _current_move.hitboxes_at(_fsm.frame_in_state)
 	else:
 		active_hitboxes_local = []
+
+
+# --- Combat public API (2.4–2.6) — called by main.gd hit resolution / match manager ---
+
+func fsm_state() -> int:
+	return _fsm.state
+
+## Frozen during hitstop — main.gd skips resolution while either fighter is frozen.
+func is_frozen() -> bool:
+	return _hitstop > 0
+
+## Invulnerable on wake-up (GETUP) and when KO'd — hits pass through.
+func is_invulnerable() -> bool:
+	return _fsm.state == CharacterStateMachine.State.GETUP \
+		or _fsm.state == CharacterStateMachine.State.KO
+
+## True while holding the away-from-opponent direction (the block input, 2.4).
+func is_holding_back() -> bool:
+	var buf: InputBuffer = InputManager.get_buffer(player_index)
+	var bwd_bit: int = InputBuffer.LEFT if facing > 0 else InputBuffer.RIGHT
+	return buf.is_held(bwd_bit)
+
+## The move whose hitbox can currently connect (null if none / already hit this attack).
+func get_active_move() -> MoveData:
+	if _move_has_hit or _current_move == null:
+		return null
+	if not CharacterStateMachine.is_attacking(_fsm.state):
+		return null
+	if active_hitboxes_local.is_empty():
+		return null
+	return _current_move
+
+## Latch so one attack lands at most one hit (survives the hitstop freeze, 2.4).
+func mark_move_hit() -> void:
+	_move_has_hit = true
+
+func apply_hitstop(frames: int) -> void:
+	_hitstop = frames
+
+## Resolve a clean hit (2.4) — damage, pushback, and HITSTUN (or KNOCKDOWN on a
+## launcher / airborne hit, 2.5). push_dir is +1/-1 away from the attacker.
+func apply_hit(move: MoveData, push_dir: float) -> void:
+	health = maxi(0, health - move.damage)
+	_stun_frames = move.hitstun
+	_pushback_vel = move.pushback_hit * push_dir
+	if move.causes_knockdown or CharacterStateMachine.is_airborne(_fsm.state):
+		_fsm.on_launched()   # → KNOCKDOWN
+	else:
+		_fsm.on_hit()        # → HITSTUN
+
+## Resolve a blocked hit (2.4) — no damage (no chip in v1), BLOCKSTUN, more pushback.
+func apply_block(move: MoveData, push_dir: float) -> void:
+	_stun_frames = move.blockstun
+	_pushback_vel = move.pushback_block * push_dir
+	_fsm.on_blocked()        # → BLOCKSTUN
+
+## Force the KO state on the round loser (2.6).
+func force_ko() -> void:
+	_fsm.on_ko()
+
+## Reset everything for a fresh round (2.6).
+func reset_for_round(spawn_x: float) -> void:
+	position = Vector2(spawn_x, _floor_y)
+	health = MAX_HEALTH
+	_vel = Vector2.ZERO
+	_hitstop = 0
+	_stun_frames = 0
+	_pushback_vel = 0.0
+	_current_move = null
+	_move_has_hit = false
+	active_hitboxes_local = []
+	_fsm.reset(CharacterStateMachine.State.IDLE)
+	reset_physics_interpolation()
