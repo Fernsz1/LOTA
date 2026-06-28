@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="MoveData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
+
+[resource]
+script = ExtResource("1_move")
+move_name = "jab"
+startup = 3
+active = 2
+recovery = 7
+hitboxes = Array[Rect2]([Rect2(20, -64, 36, 20)])
+damage = 30
+hitstun = 13
+blockstun = 9
+hitstop = 8
+pushback_hit = 2.0
+pushback_block = 3.0
