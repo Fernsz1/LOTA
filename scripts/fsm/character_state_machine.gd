@@ -85,9 +85,9 @@ func can_transition(to: State) -> bool:
 		State.JUMP_LAND, State.DASH, State.BACKDASH, State.GETUP:
 			return to == State.IDLE
 		State.FAST_ATTACK, State.HEAVY_ATTACK, State.SKILL:
-			return to == State.IDLE
+			return to == State.IDLE or to == State.JUMP_AIR
 		State.HITSTUN, State.BLOCKSTUN:
-			return to == State.IDLE
+			return to == State.IDLE or to == State.JUMP_AIR
 		State.KNOCKDOWN:
 			return to == State.GETUP
 	return false

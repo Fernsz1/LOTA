@@ -63,6 +63,7 @@ func setup(floor_y: float, left_x: float, right_x: float, overlay: Node) -> void
 	_left_x = left_x
 	_right_x = right_x
 	_overlay = overlay
+	position.y = _floor_y
 
 
 func _ready() -> void:
