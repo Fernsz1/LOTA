@@ -3,6 +3,7 @@ extends SceneTree
 ## Run: godot --headless --script res://tests/test_move_data.gd  (exit 0 = all pass)
 
 const MD := preload("res://scripts/combat/move_data.gd")
+const PD := preload("res://scripts/combat/projectile_data.gd")
 
 var _checks := 0
 var _failures := 0
@@ -22,6 +23,8 @@ func _initialize() -> void:
 	_test_hitboxes_at()
 	_test_derived_advantage()
 	_test_validate()
+	_test_projectile_spawn_at()
+	_test_validate_with_projectile()
 	print("\n%d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -73,3 +76,24 @@ func _test_validate() -> void:
 	var empty: Array[Rect2] = []
 	no_box.hitboxes = empty
 	_check(not no_box.validate(), "validate() false when hitboxes empty")
+
+func _test_projectile_spawn_at() -> void:
+	var m := _jab()                 # startup 3
+	_check(m.projectile == null, "no projectile by default")
+	_check(m.projectile_spawn_at() == 3, "spawn_at defaults to startup (first active)")
+	m.projectile_spawn_frame = 5
+	_check(m.projectile_spawn_at() == 5, "explicit projectile_spawn_frame wins")
+
+# A pure-projectile move (no melee hitbox) is valid IFF it has a projectile.
+func _test_validate_with_projectile() -> void:
+	var m := _jab()
+	var empty: Array[Rect2] = []
+	m.hitboxes = empty
+	_check(not m.validate(), "empty hitboxes + no projectile is invalid")
+	m.projectile = PD.new()
+	m.projectile.speed = 7.0
+	m.projectile.max_range = 900.0
+	m.projectile.hitbox = Rect2(0, -12, 28, 24)
+	m.projectile.hitstun = 18
+	m.projectile.blockstun = 12
+	_check(m.validate(), "empty hitboxes + a projectile is valid")

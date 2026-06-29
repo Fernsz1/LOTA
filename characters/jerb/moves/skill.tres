@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="MoveData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="MoveData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
+[ext_resource type="Resource" path="res://characters/_dev/test_fireball.tres" id="2_proj"]
 
 [resource]
 script = ExtResource("1_move")
@@ -16,3 +17,4 @@ hitstop = 10
 pushback_hit = 1.5
 pushback_block = 4.0
 causes_knockdown = false
+projectile = ExtResource("2_proj")

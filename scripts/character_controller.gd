@@ -52,6 +52,8 @@ var _move_has_hit: bool = false       # one hit per attack: cleared when a new a
 var _hitstop: int = 0                 # impact freeze; pauses everything incl. frame_in_state
 var _stun_frames: int = 0             # length of the current HITSTUN/BLOCKSTUN
 var _pushback_vel: float = 0.0        # px/frame applied during a reaction, decaying
+var _projectile_spawned_this_move: bool = false   # 3.2: one projectile per attack
+signal projectile_requested(data: ProjectileData, origin: Vector2, facing: int)
 
 var _overlay: Node = null
 
@@ -88,6 +90,7 @@ func _physics_process(_delta: float) -> void:
 	_resolve_busy_exits(buf)
 	_process_input(buf)
 	_resolve_attack()
+	_resolve_projectile_spawn()
 	_apply_movement()
 	_update_debug()
 	_fsm.tick()
@@ -179,25 +182,21 @@ func _process_input(buf: InputBuffer) -> void:
 	# NOTE: Treating ultimate as a second SKILL slot to avoid changing FSM structure (Phase 3.1 constraint).
 	if move_ultimate != null and buf.pressed_within(InputBuffer.ULTIMATE, ATTACK_BUFFER) \
 			and _fsm.request(CharacterStateMachine.State.SKILL):
-		_current_move = move_ultimate
-		_move_has_hit = false
+		_arm(move_ultimate)
 		return
 	if move_heavy != null and buf.pressed_within(InputBuffer.HEAVY, ATTACK_BUFFER) \
 			and _fsm.request(CharacterStateMachine.State.HEAVY_ATTACK):
-		_current_move = move_heavy
-		_move_has_hit = false
+		_arm(move_heavy)
 		return
 	if move_skill != null and buf.pressed_within(InputBuffer.SKILL, ATTACK_BUFFER) \
 			and _fsm.request(CharacterStateMachine.State.SKILL):
-		# TODO(3.5): skill.tres is currently a single 120-damage hit. Multi-hit behavior 
+		# TODO(3.5): skill.tres is currently a single 120-damage hit. Multi-hit behavior
 		# (3 hits) will need the cancel system (3.5) to chain properly.
-		_current_move = move_skill
-		_move_has_hit = false
+		_arm(move_skill)
 		return
 	if move_fast != null and buf.pressed_within(InputBuffer.FAST, ATTACK_BUFFER) \
 			and _fsm.request(CharacterStateMachine.State.FAST_ATTACK):
-		_current_move = move_fast
-		_move_has_hit = false
+		_arm(move_fast)
 		return
 
 	# Double-tap check — fires before single-direction walk so a second tap dashes.
@@ -323,6 +322,28 @@ func _resolve_attack() -> void:
 		active_hitboxes_local = []
 
 
+## Arm a freshly-started attack: set the move and clear per-attack latches.
+func _arm(move: MoveData) -> void:
+	_current_move = move
+	_move_has_hit = false
+	_projectile_spawned_this_move = false
+
+
+## 3.2 — emit a spawn request on the move's projectile_spawn_at() frame, once.
+func _resolve_projectile_spawn() -> void:
+	if _current_move == null or _current_move.projectile == null:
+		return
+	if not CharacterStateMachine.is_attacking(_fsm.state):
+		return
+	if _projectile_spawned_this_move:
+		return
+	if _fsm.frame_in_state == _current_move.projectile_spawn_at():
+		var off: Vector2 = _current_move.projectile.spawn_offset
+		var origin: Vector2 = position + Vector2(off.x * facing, off.y)
+		projectile_requested.emit(_current_move.projectile, origin, facing)
+		_projectile_spawned_this_move = true
+
+
 # --- Combat public API (2.4–2.6) — called by main.gd hit resolution / match manager ---
 
 func fsm_state() -> int:
@@ -377,6 +398,22 @@ func apply_block(move: MoveData, push_dir: float) -> void:
 	_pushback_vel = move.pushback_block * push_dir
 	_fsm.on_blocked()        # → BLOCKSTUN
 
+## Resolve a projectile clean hit (3.2) — same effect as apply_hit, ProjectileData payload.
+func apply_hit_proj(data: ProjectileData, push_dir: float) -> void:
+	health = maxi(0, health - data.damage)
+	_stun_frames = data.hitstun
+	_pushback_vel = data.pushback_hit * push_dir
+	if data.causes_knockdown:
+		_fsm.on_launched()
+	else:
+		_fsm.on_hit()
+
+## Resolve a blocked projectile (3.2) — no damage, blockstun, more pushback.
+func apply_block_proj(data: ProjectileData, push_dir: float) -> void:
+	_stun_frames = data.blockstun
+	_pushback_vel = data.pushback_block * push_dir
+	_fsm.on_blocked()
+
 ## Force the KO state on the round loser (2.6).
 func force_ko() -> void:
 	_fsm.on_ko()
@@ -391,6 +428,7 @@ func reset_for_round(spawn_x: float) -> void:
 	_pushback_vel = 0.0
 	_current_move = null
 	_move_has_hit = false
+	_projectile_spawned_this_move = false
 	active_hitboxes_local = []
 	_fsm.reset(CharacterStateMachine.State.IDLE)
 	reset_physics_interpolation()
