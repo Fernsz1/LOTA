@@ -21,6 +21,8 @@ extends Resource
 @export var pushback_hit: float = 0.0        # px/frame
 @export var pushback_block: float = 0.0      # px/frame; block ≥ hit
 @export var causes_knockdown: bool = false   # 2.5: on hit, force KNOCKDOWN instead of HITSTUN
+@export var projectile: ProjectileData = null   # 3.2: if set, this move spawns a projectile
+@export var projectile_spawn_frame: int = -1     # frame_in_state to spawn on; -1 = first active (startup)
 
 ## Total length; spans are disjoint so it's a clean sum (feel-reference §3).
 func total() -> int:
@@ -48,6 +50,11 @@ func on_block() -> int:
 func on_hit() -> int:
 	return hitstun - ((active - 1) + recovery)
 
+## 3.2 — frame_in_state on which this move spawns its projectile (if any).
+## Defaults to the first active frame (startup).
+func projectile_spawn_at() -> int:
+	return projectile_spawn_frame if projectile_spawn_frame >= 0 else startup
+
 ## Sanity-check on load (conventions: validate with assert/push_error). Hard errors
 ## return false; soft design smells warn. Call after load() in 2.3.
 func validate() -> bool:
@@ -55,8 +62,8 @@ func validate() -> bool:
 	if startup < 0 or active < 1 or recovery < 0:
 		push_error("MoveData '%s': need startup>=0, active>=1, recovery>=0" % move_name)
 		ok = false
-	if hitboxes.is_empty():
-		push_error("MoveData '%s': needs >=1 hitbox" % move_name)
+	if hitboxes.is_empty() and projectile == null:
+		push_error("MoveData '%s': needs >=1 hitbox (or a projectile)" % move_name)
 		ok = false
 	if damage < 0 or hitstun < 0 or blockstun < 0 or hitstop < 0:
 		push_error("MoveData '%s': negative damage/stun/hitstop" % move_name)
