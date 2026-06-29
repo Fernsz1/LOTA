@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/character/character_data.gd" id="1_qxtw4"]
+
+[resource]
+script = ExtResource("1_qxtw4")
+character_name = "Jerb"
+max_health = 1000
+walk_speed = 180.0
+jump_velocity = -520.0
