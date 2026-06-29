@@ -12,6 +12,9 @@ const RIGHT_WALL_X: float = 1230.0
 @onready var _p1: CharacterController = $P1
 @onready var _p2: CharacterController = $P2
 
+const PROJECTILE_SCENE := preload("res://scenes/projectile.tscn")
+var _projectiles: Array[Projectile] = []
+
 
 func _ready() -> void:
 	# Run AFTER child controllers so pushbox/facing logic sees this tick's positions.
@@ -20,11 +23,14 @@ func _ready() -> void:
 	Input.use_accumulated_input = false
 	_p1.setup(FLOOR_Y, LEFT_WALL_X, RIGHT_WALL_X, _overlay)
 	_p2.setup(FLOOR_Y, LEFT_WALL_X, RIGHT_WALL_X, _overlay)
+	_p1.projectile_requested.connect(_on_projectile_requested.bind(1))
+	_p2.projectile_requested.connect(_on_projectile_requested.bind(2))
 
 
 func _physics_process(_delta: float) -> void:
 	_update_facing()      # fresh facing first: combat reads back-direction + mirrors boxes
 	_resolve_combat()
+	_resolve_projectiles()
 	_resolve_pushboxes()
 
 
@@ -58,6 +64,61 @@ func _try_hit(attacker: CharacterController, defender: CharacterController) -> v
 		defender.apply_block(move, push_dir)
 	else:
 		defender.apply_hit(move, push_dir)
+
+
+# 3.2 — spawn one projectile, gated to ONE live per owner (fire-and-forget). If the
+# owner already has a live projectile the request is dropped (the move still animated).
+func _on_projectile_requested(data: ProjectileData, origin: Vector2, facing: int, owner_index: int) -> void:
+	for p in _projectiles:
+		if p.owner_index == owner_index and not p.is_expired():
+			return
+	var proj: Projectile = PROJECTILE_SCENE.instantiate()
+	add_child(proj)
+	proj.setup(data, origin, facing, owner_index)
+	_projectiles.append(proj)
+
+
+# 3.2 — move + resolve every live projectile vs the OPPONENT, reusing the 2.4 path.
+# Frozen with the fighters during hitstop. Despawns on hit/block/range.
+func _resolve_projectiles() -> void:
+	if _p1.is_frozen() or _p2.is_frozen():
+		return
+	for proj in _projectiles:
+		if proj.is_expired():
+			continue
+		proj.step()
+		var defender: CharacterController = _p2 if proj.owner_index == 1 else _p1
+		var overlapping: bool = CombatBoxes.overlaps(proj.get_hitboxes(), defender.get_hurtboxes())
+		var guarding: bool = HitResolver.is_guarding(defender.fsm_state(), defender.is_holding_back())
+		var outcome: int = HitResolver.classify(overlapping, defender.is_invulnerable(), guarding)
+		if outcome == HitResolver.Outcome.NONE:
+			continue
+		var push_dir: float = signf(defender.position.x - proj.position.x)
+		if push_dir == 0.0:
+			push_dir = float(proj.facing)
+		defender.apply_hitstop(proj.data.hitstop)   # defender only — thrower keeps acting (classic fireball)
+		if outcome == HitResolver.Outcome.BLOCK:
+			defender.apply_block_proj(proj.data, push_dir)
+		else:
+			defender.apply_hit_proj(proj.data, push_dir)
+		proj.expire()
+	# cull expired
+	var alive: Array[Projectile] = []
+	for proj in _projectiles:
+		if proj.is_expired():
+			proj.queue_free()
+		else:
+			alive.append(proj)
+	_projectiles = alive
+
+
+## 3.2 — live projectile hitboxes for the debug renderer (combat_debug.gd).
+func get_projectile_hitboxes() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for proj in _projectiles:
+		if not proj.is_expired():
+			out.append_array(proj.get_hitboxes())
+	return out
 
 
 # Prevent horizontal overlap by pushing characters apart along X.

@@ -9,7 +9,9 @@ const COL_HIT: Color = Color(0.9, 0.2, 0.2, 0.5)
 const COL_PUSH: Color = Color(0.9, 0.8, 0.2, 0.9)
 
 @export var players: Array[NodePath] = []
+@export var main_path: NodePath
 
+var _main: Node = null
 var _controllers: Array[CharacterController] = []
 var _enabled: bool = true          # on by default during development
 var _was_contact: bool = false
@@ -17,6 +19,8 @@ var _was_contact: bool = false
 func _ready() -> void:
 	for p in players:
 		_controllers.append(get_node(p))
+	if not main_path.is_empty():
+		_main = get_node(main_path)
 
 func _physics_process(_delta: float) -> void:
 	if Input.is_action_just_pressed("debug_boxes"):
@@ -45,4 +49,7 @@ func _draw() -> void:
 		for r in c.get_hurtboxes():
 			draw_rect(r, COL_HURT, true)
 		for r in c.get_hitboxes():
+			draw_rect(r, COL_HIT, true)
+	if _main != null:
+		for r in _main.get_projectile_hitboxes():
 			draw_rect(r, COL_HIT, true)
