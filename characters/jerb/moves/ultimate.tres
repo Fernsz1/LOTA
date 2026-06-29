@@ -4,15 +4,15 @@
 
 [resource]
 script = ExtResource("1_move")
-move_name = "heavy"
-startup = 10
-active = 4
-recovery = 19
-hitboxes = Array[Rect2]([Rect2(-10, -60, 55, 30)])
-damage = 120
+move_name = "ultimate"
+startup = 20
+active = 6
+recovery = 35
+hitboxes = Array[Rect2]([Rect2(-15, -70, 65, 40)])
+damage = 200
 hitstun = 21
 blockstun = 16
-hitstop = 13
-pushback_hit = 5.0
-pushback_block = 3.0
+hitstop = 18
+pushback_hit = 8.0
+pushback_block = 5.0
 causes_knockdown = true
