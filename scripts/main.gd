@@ -63,13 +63,38 @@ func _try_hit(attacker: CharacterController, defender: CharacterController) -> v
 # Prevent horizontal overlap by pushing characters apart along X.
 # Y is ignored so airborne characters can jump over each other freely.
 # If a push hits a stage wall the surplus is transferred to the other character.
+var _deep_overlap_frames: int = 0
+
 func _resolve_pushboxes() -> void:
-	var min_dist: float = CharacterController.PUSH_W
 	var dx: float = _p2.position.x - _p1.position.x
+	var min_dist: float = CharacterController.PUSH_W
+
+	# Airborne collisions only happen if their standard pushboxes are horizontally overlapping
+	if absf(dx) < min_dist:
+		var p1_air: bool = CharacterStateMachine.is_airborne(_p1.fsm_state())
+		var p2_air: bool = CharacterStateMachine.is_airborne(_p2.fsm_state())
+
+		if p1_air and p2_air:
+			_p1._fsm.on_launched()
+			_p2._fsm.on_launched()
+			return
+		elif p1_air or p2_air:
+			return
+	
+	# If a deep overlap happens (jumping player landing), temporarily increase 
+	# the target separation distance so they bounce farther apart.
+	if absf(dx) < min_dist * 0.6:
+		_deep_overlap_frames = 12
+		
+	if _deep_overlap_frames > 0:
+		_deep_overlap_frames -= 1
+		min_dist = CharacterController.PUSH_W * 1.8
+
 	if absf(dx) >= min_dist:
 		return
 
-	var push: float = (min_dist - absf(dx)) * 0.5
+	var raw_push: float = (min_dist - absf(dx)) * 0.5
+	var push: float = minf(raw_push, 8.0)  # Faster but smooth push for Case 2
 	var dir: float = 1.0 if dx >= 0.0 else -1.0  # P1 goes left, P2 goes right (or inverse)
 	var half_w: float = CharacterController.PUSH_W * 0.5
 	var min_x: float = LEFT_WALL_X + half_w
@@ -101,6 +126,5 @@ func _resolve_pushboxes() -> void:
 # Characters always face each other. Re-derived every frame from positions so
 # it stays correct even if an air jump temporarily shifts relative sides.
 func _update_facing() -> void:
-	var p1_left: bool = _p1.position.x <= _p2.position.x
-	_p1.facing = 1 if p1_left else -1
-	_p2.facing = -1 if p1_left else 1
+	_p1.facing = 1 if _p2.global_position.x > _p1.global_position.x else -1
+	_p2.facing = 1 if _p1.global_position.x > _p2.global_position.x else -1
