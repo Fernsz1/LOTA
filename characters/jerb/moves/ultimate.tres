@@ -2,17 +2,18 @@
 
 [ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
 
+; Iron Barrage (The Four Corners) — stubbed as single hit. Full 4-hit sequence pending Phase 3.5.
 [resource]
 script = ExtResource("1_move")
 move_name = "ultimate"
 startup = 20
-active = 6
-recovery = 35
-hitboxes = Array[Rect2]([Rect2(-15, -70, 65, 40)])
-damage = 200
+active = 8
+recovery = 40
+hitboxes = Array[Rect2]([Rect2(-10, -70, 65, 45)])
+damage = 220
 hitstun = 21
 blockstun = 16
-hitstop = 18
-pushback_hit = 8.0
-pushback_block = 5.0
+hitstop = 20
+pushback_hit = 9.0
+pushback_block = 6.0
 causes_knockdown = true

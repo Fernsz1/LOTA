@@ -7,6 +7,7 @@
 [ext_resource type="Resource" path="res://characters/jerb/moves/jab.tres" id="5_jab"]
 [ext_resource type="Resource" path="res://characters/jerb/moves/heavy.tres" id="6_heavy"]
 [ext_resource type="Resource" path="res://characters/jerb/moves/skill.tres" id="9_skill"]
+[ext_resource type="Resource" path="res://characters/jerb/moves/ultimate.tres" id="10_ultimate"]
 [ext_resource type="PackedScene" path="res://scenes/match_hud.tscn" id="7_mhud"]
 [ext_resource type="Script" path="res://scripts/match/match_manager.gd" id="8_mmgr"]
 
@@ -25,6 +26,7 @@ box_color = Color(0.2, 0.5, 0.9, 1)
 move_fast = ExtResource("5_jab")
 move_heavy = ExtResource("6_heavy")
 move_skill = ExtResource("9_skill")
+move_ultimate = ExtResource("10_ultimate")
 
 [node name="P2" parent="." unique_id=1624087936 instance=ExtResource("3_charbox")]
 position = Vector2(880, 560)
@@ -33,6 +35,8 @@ facing = -1
 box_color = Color(0.9, 0.25, 0.2, 1)
 move_fast = ExtResource("5_jab")
 move_heavy = ExtResource("6_heavy")
+move_skill = ExtResource("9_skill")
+move_ultimate = ExtResource("10_ultimate")
 
 [node name="CombatDebug" type="Node2D" parent="."]
 script = ExtResource("4_dbgbox")
