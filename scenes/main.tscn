@@ -35,6 +35,7 @@ move_heavy = ExtResource("6_heavy")
 [node name="CombatDebug" type="Node2D" parent="."]
 script = ExtResource("4_dbgbox")
 players = [NodePath("../P1"), NodePath("../P2")]
+main_path = NodePath("..")
 
 [node name="DebugOverlay" parent="." unique_id=2021885996 instance=ExtResource("2_dbgovl")]
 
