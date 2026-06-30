@@ -23,10 +23,18 @@ const PUSH_H: float = 80.0            # pushbox height — must match visual box
 @export var player_index: int = 1
 @export var facing: int = 1           # 1 = right, -1 = left
 @export var box_color: Color = Color(1, 1, 1, 1)
+@export var character_data: CharacterData   # 3.4 — stats + move set (overrides per-instance exports)
 @export var move_fast: MoveData       # 2.3 — light attack frame data (jab)
 @export var move_heavy: MoveData      # 2.3 — heavy attack frame data (knockdown)
 @export var move_skill: MoveData      # 3.1 — skill attack frame data
 @export var move_ultimate: MoveData   # 3.1 — ultimate attack frame data
+
+# 3.4 — per-character movement (defaults = the consts above; overridden by CharacterData).
+var _walk_speed: float = WALK_SPEED
+var _walk_b_speed: float = WALK_B_SPEED
+var _jump_velocity: float = JUMP_VELOCITY
+var _jump_f_speed: float = JUMP_F_SPEED
+var _gravity: float = GRAVITY
 
 var _fsm: CharacterStateMachine = CharacterStateMachine.new()
 var _vel: Vector2 = Vector2.ZERO
@@ -69,15 +77,30 @@ func setup(floor_y: float, left_x: float, right_x: float, overlay: Node) -> void
 
 
 func _ready() -> void:
+	_apply_character_data()
 	_box.color = box_color
 	# Validate frame data on load (conventions: validate with assert/push_error).
-	if move_fast != null:
-		move_fast.validate()
-	if move_heavy != null:
-		move_heavy.validate()
+	for m in [move_fast, move_heavy, move_skill, move_ultimate]:
+		if m != null:
+			m.validate()
 	# Tell Godot the scene-file position is the true starting point — prevents the
 	# interpolator from visually sliding in from the origin on the first frame.
 	reset_physics_interpolation()
+
+
+## 3.4 — pull stats + moves from CharacterData (if assigned). Called first in _ready.
+func _apply_character_data() -> void:
+	if character_data == null:
+		return
+	if character_data.move_fast != null: move_fast = character_data.move_fast
+	if character_data.move_heavy != null: move_heavy = character_data.move_heavy
+	if character_data.move_skill != null: move_skill = character_data.move_skill
+	if character_data.move_ultimate != null: move_ultimate = character_data.move_ultimate
+	_walk_speed = character_data.walk_speed
+	_walk_b_speed = character_data.walk_b_speed
+	_jump_velocity = character_data.jump_velocity
+	_jump_f_speed = character_data.jump_f_speed
+	_gravity = character_data.gravity
 
 
 func _physics_process(_delta: float) -> void:
@@ -106,14 +129,14 @@ func _resolve_busy_exits(buf: InputBuffer) -> void:
 				var bwd_bit: int = InputBuffer.LEFT if facing > 0 else InputBuffer.RIGHT
 				if buf.is_held(fwd_bit):
 					_fsm.request(CharacterStateMachine.State.JUMP_F)
-					_vel.x = JUMP_F_SPEED * facing
+					_vel.x = _jump_f_speed * facing
 				elif buf.is_held(bwd_bit):
 					_fsm.request(CharacterStateMachine.State.JUMP_B)
-					_vel.x = -JUMP_F_SPEED * facing
+					_vel.x = -_jump_f_speed * facing
 				else:
 					_fsm.request(CharacterStateMachine.State.JUMP_AIR)
 					_vel.x = 0.0
-				_vel.y = JUMP_VELOCITY
+				_vel.y = _jump_velocity
 		CharacterStateMachine.State.JUMP_LAND:
 			if _fsm.frame_in_state >= JUMP_LAND_FRAMES:
 				_fsm.request(CharacterStateMachine.State.IDLE)
@@ -167,9 +190,9 @@ func _process_input(buf: InputBuffer) -> void:
 	# Air control: steer horizontal velocity while airborne without changing FSM state.
 	if CharacterStateMachine.is_airborne(_fsm.state):
 		if fwd_held:
-			_vel.x = JUMP_F_SPEED * facing
+			_vel.x = _jump_f_speed * facing
 		elif bwd_held:
-			_vel.x = -JUMP_F_SPEED * facing
+			_vel.x = -_jump_f_speed * facing
 		else:
 			_vel.x = 0.0
 		return
@@ -233,10 +256,10 @@ func _process_input(buf: InputBuffer) -> void:
 func _apply_movement() -> void:
 	match _fsm.state:
 		CharacterStateMachine.State.WALK_F:
-			_vel.x = WALK_SPEED * facing
+			_vel.x = _walk_speed * facing
 			_vel.y = 0.0
 		CharacterStateMachine.State.WALK_B:
-			_vel.x = -WALK_B_SPEED * facing
+			_vel.x = -_walk_b_speed * facing
 			_vel.y = 0.0
 		CharacterStateMachine.State.DASH:
 			_vel.x = DASH_SPEED * facing
@@ -246,18 +269,18 @@ func _apply_movement() -> void:
 			_vel.y = 0.0
 		CharacterStateMachine.State.JUMP_AIR, CharacterStateMachine.State.JUMP_F, \
 		CharacterStateMachine.State.JUMP_B:
-			_vel.y += GRAVITY   # horizontal vel preserved from jump launch
+			_vel.y += _gravity   # horizontal vel preserved from jump launch
 		CharacterStateMachine.State.HITSTUN, CharacterStateMachine.State.BLOCKSTUN:
 			# Pushback (2.4): slide away from the attacker, decaying
 			_vel.x = _pushback_vel
 			if position.y < _floor_y:
-				_vel.y += GRAVITY
+				_vel.y += _gravity
 			else:
 				_vel.y = 0.0
 			_pushback_vel *= PUSHBACK_DECAY
 		CharacterStateMachine.State.KNOCKDOWN:
 			if position.y < _floor_y:
-				_vel.y += GRAVITY
+				_vel.y += _gravity
 			else:
 				_vel.y = 0.0
 			_vel.x = 0.0

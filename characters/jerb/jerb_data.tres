@@ -10,8 +10,11 @@
 script = ExtResource("1_qxtw4")
 character_name = "Jerb"
 max_health = 1000
-walk_speed = 180.0
-jump_velocity = -520.0
+walk_speed = 5.0
+walk_b_speed = 4.5
+jump_velocity = -13.0
+jump_f_speed = 3.5
+gravity = 0.565
 move_fast = ExtResource("2_fast")
 move_heavy = ExtResource("3_heavy")
 move_skill = ExtResource("4_skill")

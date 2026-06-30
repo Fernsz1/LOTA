@@ -10,6 +10,7 @@
 [ext_resource type="Resource" path="res://characters/jerb/moves/ultimate.tres" id="10_ultimate"]
 [ext_resource type="PackedScene" path="res://scenes/match_hud.tscn" id="7_mhud"]
 [ext_resource type="Script" path="res://scripts/match/match_manager.gd" id="8_mmgr"]
+[ext_resource type="Resource" path="res://characters/jerb/jerb_data.tres" id="11_jerbdata"]
 
 [node name="Main" type="Node2D" unique_id=175851764]
 script = ExtResource("1_main")
@@ -23,6 +24,7 @@ color = Color(0.25, 0.25, 0.25, 1)
 [node name="P1" parent="." unique_id=841665642 instance=ExtResource("3_charbox")]
 position = Vector2(400, 560)
 box_color = Color(0.2, 0.5, 0.9, 1)
+character_data = ExtResource("11_jerbdata")
 move_fast = ExtResource("5_jab")
 move_heavy = ExtResource("6_heavy")
 move_skill = ExtResource("9_skill")
