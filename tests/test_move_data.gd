@@ -25,6 +25,7 @@ func _initialize() -> void:
 	_test_validate()
 	_test_projectile_spawn_at()
 	_test_validate_with_projectile()
+	_test_invuln_window()
 	print("\n%d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -97,3 +98,11 @@ func _test_validate_with_projectile() -> void:
 	m.projectile.hitstun = 18
 	m.projectile.blockstun = 12
 	_check(m.validate(), "empty hitboxes + a projectile is valid")
+
+func _test_invuln_window() -> void:
+	var m := _jab()
+	_check(not m.is_invuln_at(0), "no invuln by default (invuln_startup 0)")
+	m.invuln_startup = 5
+	_check(m.is_invuln_at(0), "invuln on frame 0 when invuln_startup=5")
+	_check(m.is_invuln_at(4), "invuln on frame 4 (last invuln frame)")
+	_check(not m.is_invuln_at(5), "no invuln on frame 5 (window is [0,5))")

@@ -21,6 +21,7 @@ extends Resource
 @export var pushback_hit: float = 0.0        # px/frame
 @export var pushback_block: float = 0.0      # px/frame; block ≥ hit
 @export var causes_knockdown: bool = false   # 2.5: on hit, force KNOCKDOWN instead of HITSTUN
+@export var invuln_startup: int = 0   # 3.4: frames of invuln from move start (e.g. DP anti-air); 0 = none
 @export var projectile: ProjectileData = null   # 3.2: if set, this move spawns a projectile
 @export var projectile_spawn_frame: int = -1     # frame_in_state to spawn on; -1 = first active (startup)
 
@@ -49,6 +50,10 @@ func on_block() -> int:
 
 func on_hit() -> int:
 	return hitstun - ((active - 1) + recovery)
+
+## 3.4 — is the attacker invulnerable on this in-state frame (startup invuln window)?
+func is_invuln_at(frame_in_state: int) -> bool:
+	return invuln_startup > 0 and frame_in_state < invuln_startup
 
 ## 3.2 — frame_in_state on which this move spawns its projectile (if any).
 ## Defaults to the first active frame (startup).

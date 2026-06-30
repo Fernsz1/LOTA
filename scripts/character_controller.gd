@@ -376,10 +376,14 @@ func fsm_state() -> int:
 func is_frozen() -> bool:
 	return _hitstop > 0
 
-## Invulnerable on wake-up (GETUP) and when KO'd — hits pass through.
+## Invulnerable on wake-up (GETUP), when KO'd, or during a move's startup-invuln window (3.4).
 func is_invulnerable() -> bool:
-	return _fsm.state == CharacterStateMachine.State.GETUP \
-		or _fsm.state == CharacterStateMachine.State.KO
+	if _fsm.state == CharacterStateMachine.State.GETUP or _fsm.state == CharacterStateMachine.State.KO:
+		return true
+	if _current_move != null and CharacterStateMachine.is_attacking(_fsm.state) \
+			and _current_move.is_invuln_at(_fsm.frame_in_state):
+		return true
+	return false
 
 ## True while holding the away-from-opponent direction (the block input, 2.4).
 func is_holding_back() -> bool:
