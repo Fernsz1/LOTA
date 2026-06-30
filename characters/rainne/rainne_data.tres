@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/character/character_data.gd" id="1_cd"]
+[ext_resource type="Resource" path="res://characters/rainne/moves/poke.tres" id="2_fast"]
+[ext_resource type="Resource" path="res://characters/rainne/moves/antiair.tres" id="3_heavy"]
+[ext_resource type="Resource" path="res://characters/rainne/moves/projectile.tres" id="4_skill"]
+[ext_resource type="Resource" path="res://characters/rainne/moves/ultimate.tres" id="5_ult"]
+
+[resource]
+script = ExtResource("1_cd")
+character_name = "Rainne"
+max_health = 1000
+walk_speed = 4.2
+walk_b_speed = 4.0
+jump_velocity = -12.5
+jump_f_speed = 3.0
+gravity = 0.50
+move_fast = ExtResource("2_fast")
+move_heavy = ExtResource("3_heavy")
+move_skill = ExtResource("4_skill")
+move_ultimate = ExtResource("5_ult")

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ProjectileData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/projectile_data.gd" id="1_pd"]
+
+[resource]
+script = ExtResource("1_pd")
+projectile_name = "rainne_fireball_super"
+speed = 11.0
+max_range = 1300.0
+spawn_offset = Vector2(34, -58)
+hitbox = Rect2(0, -26, 40, 52)
+damage = 140
+hitstun = 24
+blockstun = 18
+hitstop = 16
+pushback_hit = 4.0
+pushback_block = 6.0
+causes_knockdown = true
