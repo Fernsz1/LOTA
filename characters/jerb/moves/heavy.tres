@@ -16,3 +16,5 @@ hitstop = 13
 pushback_hit = 5.0
 pushback_block = 3.0
 causes_knockdown = true
+cancel_window_start = 10
+cancel_window_end = 25

@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
 
-; Clinch Strike — Jerb's signature dirty boxing move. Stubbed as single hit; multi-hit chain (3 short punches) pending Phase 3.5.
+; Clinch Strike — Jerb's signature dirty boxing move.
 [resource]
 script = ExtResource("1_move")
 move_name = "skill"

@@ -53,6 +53,7 @@ const MAX_HEALTH: int = 1000
 const ATTACK_BUFFER: int = 4          # frames of input buffer on attack press (feel-reference §4)
 const KNOCKDOWN_FRAMES: int = 80      # time face-down before getup (2.5)
 const GETUP_FRAMES: int = 16          # wake-up; invulnerable throughout (2.5)
+const JUGGLE_DECAY: float = 0.8       # 3.5: hitstun multiplier per subsequent airborne hit
 const PUSHBACK_DECAY: float = 0.85    # per-frame pushback falloff (2.4 — blockstrings self-space)
 var health: int = MAX_HEALTH
 var _current_move: MoveData = null    # the move the active attack state is reading
@@ -61,6 +62,7 @@ var _hitstop: int = 0                 # impact freeze; pauses everything incl. f
 var _stun_frames: int = 0             # length of the current HITSTUN/BLOCKSTUN
 var _pushback_vel: float = 0.0        # px/frame applied during a reaction, decaying
 var _projectile_spawned_this_move: bool = false   # 3.2: one projectile per attack
+var _juggle_count: int = 0   # 3.5: airborne hits accumulated this combo; resets on landing
 signal projectile_requested(data: ProjectileData, origin: Vector2, facing: int)
 
 var _overlay: Node = null
@@ -148,12 +150,13 @@ func _resolve_busy_exits(buf: InputBuffer) -> void:
 				_fsm.request(CharacterStateMachine.State.IDLE)
 		CharacterStateMachine.State.FAST_ATTACK, CharacterStateMachine.State.HEAVY_ATTACK, \
 		CharacterStateMachine.State.SKILL:
-			# Locked through the move's full length (2.3); then actionable again.
 			if _current_move == null or _fsm.frame_in_state >= _current_move.total():
 				if position.y < _floor_y:
 					_fsm.request(CharacterStateMachine.State.JUMP_AIR)
 				else:
 					_fsm.request(CharacterStateMachine.State.IDLE)
+			elif _current_move.in_cancel_window(_fsm.frame_in_state):
+				_try_cancel_input(buf)
 		CharacterStateMachine.State.HITSTUN, CharacterStateMachine.State.BLOCKSTUN:
 			if _fsm.frame_in_state >= _stun_frames:        # 2.4 stun length
 				if position.y < _floor_y:
@@ -213,8 +216,6 @@ func _process_input(buf: InputBuffer) -> void:
 		return
 	if move_skill != null and buf.pressed_within(InputBuffer.SKILL, ATTACK_BUFFER) \
 			and _fsm.request(CharacterStateMachine.State.SKILL):
-		# TODO(3.5): skill.tres is currently a single 120-damage hit. Multi-hit behavior
-		# (3 hits) will need the cancel system (3.5) to chain properly.
 		_arm(move_skill)
 		return
 	if move_fast != null and buf.pressed_within(InputBuffer.FAST, ATTACK_BUFFER) \
@@ -294,6 +295,7 @@ func _apply_movement() -> void:
 	if CharacterStateMachine.is_airborne(_fsm.state) and position.y >= _floor_y:
 		position.y = _floor_y
 		_vel = Vector2.ZERO
+		_juggle_count = 0
 		_fsm.request(CharacterStateMachine.State.JUMP_LAND)
 	else:
 		position.y = minf(position.y, _floor_y)
@@ -350,6 +352,29 @@ func _arm(move: MoveData) -> void:
 	_current_move = move
 	_move_has_hit = false
 	_projectile_spawned_this_move = false
+
+
+# 3.5 — called only while in_cancel_window() is true. Checks buffered attack inputs and
+# fires the first legal cancel in escalation order. Downgrade cancels (heavy→fast) are
+# not allowed; order is fast→heavy, (fast|heavy)→skill, any_attack→ultimate.
+func _try_cancel_input(buf: InputBuffer) -> void:
+	var cur := _fsm.state
+	if move_ultimate != null and buf.pressed_within(InputBuffer.ULTIMATE, ATTACK_BUFFER):
+		_cancel_into(CharacterStateMachine.State.SKILL, move_ultimate)
+		return
+	if move_skill != null and cur != CharacterStateMachine.State.SKILL \
+			and buf.pressed_within(InputBuffer.SKILL, ATTACK_BUFFER):
+		_cancel_into(CharacterStateMachine.State.SKILL, move_skill)
+		return
+	if move_heavy != null and cur == CharacterStateMachine.State.FAST_ATTACK \
+			and buf.pressed_within(InputBuffer.HEAVY, ATTACK_BUFFER):
+		_cancel_into(CharacterStateMachine.State.HEAVY_ATTACK, move_heavy)
+
+
+func _cancel_into(target: CharacterStateMachine.State, move: MoveData) -> void:
+	_fsm.request(CharacterStateMachine.State.IDLE)
+	if _fsm.request(target):
+		_arm(move)
 
 
 ## 3.2 — emit a spawn request on the move's projectile_spawn_at() frame, once.
@@ -410,10 +435,15 @@ func apply_hitstop(frames: int) -> void:
 
 ## Resolve a clean hit (2.4) — damage, pushback, and HITSTUN (or KNOCKDOWN on a
 ## launcher / airborne hit, 2.5). push_dir is +1/-1 away from the attacker.
+## 3.5: hitstun is scaled by JUGGLE_DECAY^juggle_count when the defender is airborne.
 func apply_hit(move: MoveData, push_dir: float) -> void:
 	health = maxi(0, health - move.damage)
-	_stun_frames = move.hitstun
 	_pushback_vel = move.pushback_hit * push_dir
+	if position.y < _floor_y:
+		_stun_frames = maxi(1, int(move.hitstun * pow(JUGGLE_DECAY, _juggle_count)))
+		_juggle_count += 1
+	else:
+		_stun_frames = move.hitstun
 	if move.causes_knockdown:
 		_fsm.on_launched()   # → KNOCKDOWN
 	else:
@@ -456,6 +486,7 @@ func reset_for_round(spawn_x: float) -> void:
 	_current_move = null
 	_move_has_hit = false
 	_projectile_spawned_this_move = false
+	_juggle_count = 0
 	active_hitboxes_local = []
 	_fsm.reset(CharacterStateMachine.State.IDLE)
 	reset_physics_interpolation()
