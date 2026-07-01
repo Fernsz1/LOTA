@@ -397,6 +397,11 @@ func _resolve_projectile_spawn() -> void:
 func fsm_state() -> int:
 	return _fsm.state
 
+## Frames elapsed in the current FSM state (0 on the entry frame). Used by training HUD
+## to compute exact frame advantage at the moment of contact.
+func get_frame_in_state() -> int:
+	return _fsm.frame_in_state
+
 ## Frozen during hitstop — main.gd skips resolution while either fighter is frozen.
 func is_frozen() -> bool:
 	return _hitstop > 0
@@ -415,6 +420,13 @@ func is_holding_back() -> bool:
 	var buf: InputBuffer = InputManager.get_buffer(player_index)
 	var bwd_bit: int = InputBuffer.LEFT if facing > 0 else InputBuffer.RIGHT
 	return buf.is_held(bwd_bit)
+
+## The move currently being executed — non-null throughout startup/active/recovery.
+## Unlike get_active_move(), does NOT filter by hit state; used for training readouts.
+func get_current_move() -> MoveData:
+	if _current_move == null or not CharacterStateMachine.is_attacking(_fsm.state):
+		return null
+	return _current_move
 
 ## The move whose hitbox can currently connect (null if none / already hit this attack).
 func get_active_move() -> MoveData:

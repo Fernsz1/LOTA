@@ -44,6 +44,9 @@ func _physics_process(_delta: float) -> void:
 	_hud.set_health(2, _p1_dummy.health / max_hp)
 	_hud.set_health(3, _p2_dummy.health / max_hp)
 	_hud.set_health(4, _p2.health / max_hp)
+	# Live move readout for the two human players
+	_hud.set_move_readout(1, _p1.get_current_move(), _p1.get_frame_in_state())
+	_hud.set_move_readout(2, _p2.get_current_move(), _p2.get_frame_in_state())
 
 
 func _update_facing() -> void:
@@ -81,6 +84,13 @@ func _try_hit(attacker: CharacterController, defender: CharacterController) -> v
 		defender.apply_block(move, push_dir)
 	else:
 		defender.apply_hit(move, push_dir)
+	# 4.2 — frame advantage: stun - frames remaining for attacker after contact.
+	var fis: int = attacker.get_frame_in_state()
+	var remaining: int = move.total() - fis   # frames attacker still has in this attack
+	var stun: int = move.blockstun if outcome == HitResolver.Outcome.BLOCK else move.hitstun
+	var adv: int = stun - remaining
+	var side: int = 1 if (attacker == _p1 or attacker == _p1_dummy) else 2
+	_hud.show_advantage(side, adv)
 
 
 func _on_projectile_requested(data: ProjectileData, origin: Vector2,
