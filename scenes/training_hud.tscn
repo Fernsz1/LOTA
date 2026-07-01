@@ -140,5 +140,5 @@ offset_right = 1270.0
 offset_bottom = 610.0
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 13
-text = "R: reset   1/2: cycle P1/P2 dummy mode   3/4: dummy ♥INF   Q/E: player ♥INF"
+text = "R: reset   1/2: dummy mode   3/4: dummy ♥INF   Q/E: player ♥INF   F1: hitboxes   F2: debug panel"
 horizontal_alignment = 1

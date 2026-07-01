@@ -75,11 +75,13 @@ move_skill = ExtResource("14_rprojmove")
 move_ultimate = ExtResource("15_rultimate")
 
 [node name="CombatDebug" type="Node2D" parent="."]
+visible = false
 script = ExtResource("4_dbgbox")
 players = [NodePath("../P1"), NodePath("../P1Dummy"), NodePath("../P2Dummy"), NodePath("../P2")]
 main_path = NodePath("..")
 
 [node name="DebugOverlay" parent="." instance=ExtResource("2_dbgovl")]
+visible = false
 
 [node name="TrainingHUD" parent="." instance=ExtResource("7_thud")]
 
