@@ -15,3 +15,5 @@ blockstun = 9
 hitstop = 8
 pushback_hit = 2.0
 pushback_block = 3.0
+cancel_window_start = 3
+cancel_window_end = 9

@@ -24,6 +24,8 @@ extends Resource
 @export var invuln_startup: int = 0   # 3.4: frames of invuln from move start (e.g. DP anti-air); 0 = none
 @export var projectile: ProjectileData = null   # 3.2: if set, this move spawns a projectile
 @export var projectile_spawn_frame: int = -1     # frame_in_state to spawn on; -1 = first active (startup)
+@export var cancel_window_start: int = -1  # 3.5: frame_in_state when cancel input is accepted; -1 = no cancel
+@export var cancel_window_end: int = -1    # 3.5: frame_in_state when cancel closes; -1 = last active frame (startup+active-1)
 
 ## Total length; spans are disjoint so it's a clean sum (feel-reference §3).
 func total() -> int:
@@ -50,6 +52,14 @@ func on_block() -> int:
 
 func on_hit() -> int:
 	return hitstun - ((active - 1) + recovery)
+
+## 3.5 — true while a cancel input is legal on this frame. Defaults to active frames only
+## when cancel_window_end is omitted; set it explicitly to extend the window into recovery.
+func in_cancel_window(frame_in_state: int) -> bool:
+	if cancel_window_start < 0:
+		return false
+	var end: int = cancel_window_end if cancel_window_end >= 0 else startup + active - 1
+	return frame_in_state >= cancel_window_start and frame_in_state <= end
 
 ## 3.4 — is the attacker invulnerable on this in-state frame (startup invuln window)?
 func is_invuln_at(frame_in_state: int) -> bool:
