@@ -23,7 +23,10 @@ func _process(delta: float) -> void:
 	_update_history()
 
 ## Called by 1.4/FSM later. player is 1-based.
+## Virtual players (3+) have no label slot; skip silently.
 func set_state(player: int, text: String) -> void:
+	if player - 1 >= _state_labels.size():
+		return
 	_state_labels[player - 1].text = "P%d  %s" % [player, text]
 
 func _update_history() -> void:
