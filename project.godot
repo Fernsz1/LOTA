@@ -142,6 +142,10 @@ debug_panel={
 ]
 }
 
+[audio]
+
+buses/default_bus_layout="res://audio/default_bus_layout.tres"
+
 [physics]
 
 3d/physics_engine="Jolt Physics"

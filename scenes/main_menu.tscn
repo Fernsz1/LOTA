@@ -142,9 +142,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -220.0
-offset_top = -140.0
+offset_top = -220.0
 offset_right = 220.0
-offset_bottom = 140.0
+offset_bottom = 220.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_btn_normal")
@@ -160,16 +160,50 @@ theme_override_font_sizes/font_size = 28
 text = "SETTINGS"
 horizontal_alignment = 1
 
-[node name="VolumeRow" type="HBoxContainer" parent="SettingsPanel/Panel/VBox"]
+[node name="MasterVolumeRow" type="HBoxContainer" parent="SettingsPanel/Panel/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="VolumeLabel" type="Label" parent="SettingsPanel/Panel/VBox/VolumeRow"]
+[node name="MasterVolumeLabel" type="Label" parent="SettingsPanel/Panel/VBox/MasterVolumeRow"]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
-text = "Volume"
+text = "Master Volume"
 
-[node name="VolumeSlider" type="HSlider" parent="SettingsPanel/Panel/VBox/VolumeRow"]
+[node name="MasterVolumeSlider" type="HSlider" parent="SettingsPanel/Panel/VBox/MasterVolumeRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.05
+value = 1.0
+
+[node name="MusicVolumeRow" type="HBoxContainer" parent="SettingsPanel/Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="MusicVolumeLabel" type="Label" parent="SettingsPanel/Panel/VBox/MusicVolumeRow"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Music Volume"
+
+[node name="MusicVolumeSlider" type="HSlider" parent="SettingsPanel/Panel/VBox/MusicVolumeRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.05
+value = 1.0
+
+[node name="SFXVolumeRow" type="HBoxContainer" parent="SettingsPanel/Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SFXVolumeLabel" type="Label" parent="SettingsPanel/Panel/VBox/SFXVolumeRow"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "SFX Volume"
+
+[node name="SFXVolumeSlider" type="HSlider" parent="SettingsPanel/Panel/VBox/SFXVolumeRow"]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -202,6 +236,8 @@ text = "CLOSE"
 [connection signal="pressed" from="CenterButtons/VBox/TrainingButton" to="." method="_on_training_pressed"]
 [connection signal="pressed" from="CenterButtons/VBox/LeaderboardsButton" to="." method="_on_leaderboards_pressed"]
 [connection signal="pressed" from="SettingsButton" to="." method="_on_settings_pressed"]
-[connection signal="value_changed" from="SettingsPanel/Panel/VBox/VolumeRow/VolumeSlider" to="." method="_on_volume_changed"]
+[connection signal="value_changed" from="SettingsPanel/Panel/VBox/MasterVolumeRow/MasterVolumeSlider" to="." method="_on_master_volume_changed"]
+[connection signal="value_changed" from="SettingsPanel/Panel/VBox/MusicVolumeRow/MusicVolumeSlider" to="." method="_on_music_volume_changed"]
+[connection signal="value_changed" from="SettingsPanel/Panel/VBox/SFXVolumeRow/SFXVolumeSlider" to="." method="_on_sfx_volume_changed"]
 [connection signal="toggled" from="SettingsPanel/Panel/VBox/FullscreenRow/FullscreenCheck" to="." method="_on_fullscreen_toggled"]
 [connection signal="pressed" from="SettingsPanel/Panel/VBox/CloseButton" to="." method="_on_settings_close_pressed"]
