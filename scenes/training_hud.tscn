@@ -1,0 +1,144 @@
+[gd_scene format=3 uid="uid://dtrainhud0001"]
+
+[ext_resource type="Script" path="res://scripts/training/training_hud.gd" id="1_thud"]
+
+[node name="TrainingHUD" type="CanvasLayer"]
+script = ExtResource("1_thud")
+
+[node name="P1Bar" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 10.0
+offset_right = 520.0
+offset_bottom = 30.0
+color = Color(0.1, 0.1, 0.1, 0.7)
+
+[node name="Fill" type="ColorRect" parent="P1Bar"]
+offset_right = 480.0
+offset_bottom = 20.0
+color = Color(0.3, 0.8, 0.35, 1)
+
+[node name="ModeLabel" type="Label" parent="."]
+offset_left = 540.0
+offset_top = 10.0
+offset_right = 740.0
+offset_bottom = 30.0
+theme_override_colors/font_color = Color(0.65, 0.65, 0.65, 1)
+theme_override_font_sizes/font_size = 16
+text = "TRAINING"
+horizontal_alignment = 1
+
+[node name="P2Bar" type="ColorRect" parent="."]
+offset_left = 760.0
+offset_top = 10.0
+offset_right = 1240.0
+offset_bottom = 30.0
+color = Color(0.1, 0.1, 0.1, 0.7)
+
+[node name="Fill" type="ColorRect" parent="P2Bar"]
+offset_right = 480.0
+offset_bottom = 20.0
+color = Color(0.3, 0.8, 0.35, 1)
+
+[node name="P1Info" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 33.0
+offset_right = 520.0
+offset_bottom = 51.0
+theme_override_colors/font_color = Color(0.5, 0.9, 0.5, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="P2Info" type="Label" parent="."]
+offset_left = 760.0
+offset_top = 33.0
+offset_right = 1240.0
+offset_bottom = 51.0
+theme_override_colors/font_color = Color(0.5, 0.9, 0.5, 1)
+theme_override_font_sizes/font_size = 13
+horizontal_alignment = 2
+
+[node name="P1DummyBar" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 60.0
+offset_right = 520.0
+offset_bottom = 74.0
+color = Color(0.1, 0.1, 0.1, 0.7)
+
+[node name="Fill" type="ColorRect" parent="P1DummyBar"]
+offset_right = 480.0
+offset_bottom = 14.0
+color = Color(0.75, 0.65, 0.2, 1)
+
+[node name="P2DummyBar" type="ColorRect" parent="."]
+offset_left = 760.0
+offset_top = 60.0
+offset_right = 1240.0
+offset_bottom = 74.0
+color = Color(0.1, 0.1, 0.1, 0.7)
+
+[node name="Fill" type="ColorRect" parent="P2DummyBar"]
+offset_right = 480.0
+offset_bottom = 14.0
+color = Color(0.75, 0.65, 0.2, 1)
+
+[node name="P1DummyInfo" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 77.0
+offset_right = 520.0
+offset_bottom = 95.0
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 13
+text = "P1Dummy: STAND"
+
+[node name="P2DummyInfo" type="Label" parent="."]
+offset_left = 760.0
+offset_top = 77.0
+offset_right = 1240.0
+offset_bottom = 95.0
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 13
+horizontal_alignment = 2
+text = "P2Dummy: STAND"
+
+[node name="P1MoveReadout" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 105.0
+offset_right = 620.0
+offset_bottom = 123.0
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="P2MoveReadout" type="Label" parent="."]
+offset_left = 660.0
+offset_top = 105.0
+offset_right = 1240.0
+offset_bottom = 123.0
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
+theme_override_font_sizes/font_size = 13
+horizontal_alignment = 2
+
+[node name="P1Advantage" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 126.0
+offset_right = 300.0
+offset_bottom = 148.0
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
+theme_override_font_sizes/font_size = 18
+
+[node name="P2Advantage" type="Label" parent="."]
+offset_left = 980.0
+offset_top = 126.0
+offset_right = 1240.0
+offset_bottom = 148.0
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 2
+
+[node name="Controls" type="Label" parent="."]
+offset_left = 10.0
+offset_top = 585.0
+offset_right = 1270.0
+offset_bottom = 610.0
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 13
+text = "R: reset   1/2: dummy mode   3/4: dummy ♥INF   Q/E: player ♥INF   F1: hitboxes   F2: debug panel"
+horizontal_alignment = 1
