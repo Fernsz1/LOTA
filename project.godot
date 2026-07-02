@@ -20,6 +20,7 @@ config/icon="res://icon.svg"
 ControlsConfig="*res://scripts/controls_config.gd"
 GameClock="*res://scripts/game_clock.gd"
 InputManager="*res://scripts/input_manager.gd"
+MatchSelection="*res://scripts/match_selection.gd"
 _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 [display]
