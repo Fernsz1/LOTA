@@ -1,6 +1,7 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/main_menu.gd" id="1_menu"]
+[ext_resource type="Script" path="res://scripts/controls_menu.gd" id="2_controls"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_normal"]
 bg_color = Color(0.13, 0.13, 0.17, 1)
@@ -223,6 +224,15 @@ text = "Fullscreen"
 [node name="FullscreenCheck" type="CheckButton" parent="SettingsPanel/Panel/VBox/FullscreenRow"]
 layout_mode = 2
 
+[node name="ControlsButton" type="Button" parent="SettingsPanel/Panel/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_btn_hover")
+text = "CONTROLS"
+
 [node name="CloseButton" type="Button" parent="SettingsPanel/Panel/VBox"]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
@@ -232,6 +242,77 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_btn_hover")
 text = "CLOSE"
 
+[node name="ControlsPanel" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_controls")
+
+[node name="Dim" type="ColorRect" parent="ControlsPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Panel" type="PanelContainer" parent="ControlsPanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -260.0
+offset_right = 300.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_btn_normal")
+
+[node name="VBox" type="VBoxContainer" parent="ControlsPanel/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="ControlsTitle" type="Label" parent="ControlsPanel/Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 28
+text = "CONTROLS"
+horizontal_alignment = 1
+
+[node name="Scroll" type="ScrollContainer" parent="ControlsPanel/Panel/VBox"]
+custom_minimum_size = Vector2(0, 340)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Rows" type="VBoxContainer" parent="ControlsPanel/Panel/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="HintLabel" type="Label" parent="ControlsPanel/Panel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Click a key, then press a new one. Esc cancels."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="ControlsBackButton" type="Button" parent="ControlsPanel/Panel/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_btn_hover")
+text = "BACK"
+
 [connection signal="pressed" from="CenterButtons/VBox/PlayButton" to="." method="_on_play_pressed"]
 [connection signal="pressed" from="CenterButtons/VBox/TrainingButton" to="." method="_on_training_pressed"]
 [connection signal="pressed" from="CenterButtons/VBox/LeaderboardsButton" to="." method="_on_leaderboards_pressed"]
@@ -240,4 +321,6 @@ text = "CLOSE"
 [connection signal="value_changed" from="SettingsPanel/Panel/VBox/MusicVolumeRow/MusicVolumeSlider" to="." method="_on_music_volume_changed"]
 [connection signal="value_changed" from="SettingsPanel/Panel/VBox/SFXVolumeRow/SFXVolumeSlider" to="." method="_on_sfx_volume_changed"]
 [connection signal="toggled" from="SettingsPanel/Panel/VBox/FullscreenRow/FullscreenCheck" to="." method="_on_fullscreen_toggled"]
+[connection signal="pressed" from="SettingsPanel/Panel/VBox/ControlsButton" to="." method="_on_controls_pressed"]
 [connection signal="pressed" from="SettingsPanel/Panel/VBox/CloseButton" to="." method="_on_settings_close_pressed"]
+[connection signal="pressed" from="ControlsPanel/Panel/VBox/ControlsBackButton" to="ControlsPanel" method="_on_back_pressed"]
