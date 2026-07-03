@@ -299,7 +299,10 @@ func _apply_movement() -> void:
 			else:
 				_vel.y = 0.0
 			_pushback_vel *= PUSHBACK_DECAY
-		CharacterStateMachine.State.KNOCKDOWN:
+		CharacterStateMachine.State.KNOCKDOWN, CharacterStateMachine.State.KO:
+			# KO falls like KNOCKDOWN: a fighter can die with airborne velocity
+			# (throw slam pop, juggle kill) and the body must arc back to the
+			# floor — the default arm would freeze _vel.y and float it away.
 			if position.y < _floor_y:
 				_vel.y += _gravity
 			else:

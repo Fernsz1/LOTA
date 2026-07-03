@@ -63,6 +63,7 @@ func _physics_process(_delta: float) -> void:
 		0: _phase_takedown()
 		1: _phase_tech()
 		2: _phase_ultimate()
+		3: _phase_killing_throw()
 
 
 func _record_states() -> void:
@@ -117,6 +118,31 @@ func _phase_ultimate() -> void:
 	InputManager.set_override(2, InputBuffer.FAST if _frame % 2 == 0 else 0)
 	if _saw_knockdown:
 		_check(_p2.health == 1000 - 300, "ultimate: untechable, 300 damage (health=%d)" % _p2.health)
+		_next_phase()
+
+
+# Scenario 3 — a throw that KILLS: MatchManager forces KO the same frame the
+# slam zeroes health, while the victim still has the upward pop velocity. The
+# corpse must arc back down and settle on the floor, not float away.
+var _ko_forced := false
+var _ko_wait := 0
+
+func _phase_killing_throw() -> void:
+	# Delay the grab past the tech lookback window: P2's FAST mash from the
+	# ultimate scenario is still in its input buffer and would tech instantly.
+	InputManager.set_override(1, InputBuffer.SKILL if (_frame >= 30 and _frame < 34) else 0)
+	if not _ko_forced:
+		if _frame == 1:
+			_p2.health = 150   # takedown (180 dmg) will zero this
+		if _saw_knockdown and _p2.health <= 0:
+			_p2.force_ko()     # what MatchManager does on detecting health <= 0
+			_ko_forced = true
+		return
+	_ko_wait += 1
+	if _ko_wait >= 120:
+		_check(_p2.fsm_state() == CharacterStateMachine.State.KO, "killing throw: victim stays KO")
+		_check(_p2.position.y == FLOOR_Y,
+			"killing throw: body settled on the floor (y=%.1f)" % _p2.position.y)
 		_finish()
 
 
