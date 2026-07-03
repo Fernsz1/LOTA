@@ -21,6 +21,13 @@ func _ready() -> void:
 	process_physics_priority = 1
 	# Each input event dispatched immediately — reduces latency on high-Hz displays.
 	Input.use_accumulated_input = false
+	# Character-select picks (if any) override the .tscn-authored defaults. Absent
+	# when this scene is run directly (e.g. F6 in the editor) — the tscn's own
+	# character_data/box_color still apply in that case.
+	if MatchSelection.p1_data != null:
+		_p1.set_character(MatchSelection.p1_data, MatchSelection.p1_color)
+	if MatchSelection.p2_data != null:
+		_p2.set_character(MatchSelection.p2_data, MatchSelection.p2_color)
 	_p1.setup(FLOOR_Y, LEFT_WALL_X, RIGHT_WALL_X, _overlay)
 	_p2.setup(FLOOR_Y, LEFT_WALL_X, RIGHT_WALL_X, _overlay)
 	_p1.projectile_requested.connect(_on_projectile_requested.bind(1))

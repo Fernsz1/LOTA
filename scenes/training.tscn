@@ -15,9 +15,19 @@
 [ext_resource type="Resource" path="res://characters/rainne/moves/poke.tres" id="13_poke"]
 [ext_resource type="Resource" path="res://characters/rainne/moves/projectile.tres" id="14_rprojmove"]
 [ext_resource type="Resource" path="res://characters/rainne/moves/ultimate.tres" id="15_rultimate"]
+[ext_resource type="PackedScene" path="res://scenes/quit_confirm.tscn" id="16_quitconfirm"]
 
 [node name="Training" type="Node2D"]
 script = ExtResource("1_tmain")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.07, 0.08, 0.11, 1)
 
 [node name="Floor" type="ColorRect" parent="."]
 offset_top = 560.0
@@ -92,3 +102,5 @@ p1_dummy_path = NodePath("../P1Dummy")
 p2_dummy_path = NodePath("../P2Dummy")
 p2_path = NodePath("../P2")
 hud_path = NodePath("../TrainingHUD")
+
+[node name="QuitConfirm" parent="." instance=ExtResource("16_quitconfirm")]

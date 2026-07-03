@@ -4,6 +4,7 @@ extends Node
 ## handles round-end → reset → next round / match-end, and reflects to the HUD.
 
 const RESET_DELAY: int = 90        # frames to hold on KO/result before the next round
+const MATCH_END_HOLD: int = 150    # frames to hold on the final win before cutting to Results — longer beat than a round transition
 const P1_SPAWN_X: float = 400.0
 const P2_SPAWN_X: float = 880.0
 const INTRO_FRAMES: int = 45       # how long "ROUND N" stays up at round start
@@ -74,12 +75,13 @@ func _end_round(winner: int) -> void:
 	_hud.set_rounds(1, _state.p1_rounds)
 	_hud.set_rounds(2, _state.p2_rounds)
 	if _state.phase == MatchState.Phase.MATCH_END:
-		_hud.announce("PLAYER %d WINS" % _state.match_winner())
-	elif winner == 0:
-		_hud.announce("DRAW")
+		var winner_name: String = MatchSelection.p1_name if _state.match_winner() == 1 else MatchSelection.p2_name
+		Leaderboard.record_win(winner_name)
+		_hud.announce("%s WINS" % winner_name)
+		_delay = MATCH_END_HOLD
 	else:
-		_hud.announce("K.O.")
-	_delay = RESET_DELAY
+		_hud.announce("DRAW" if winner == 0 else "K.O.")
+		_delay = RESET_DELAY
 
 func _round_end() -> void:
 	_update_bars()
@@ -88,9 +90,10 @@ func _round_end() -> void:
 		_reset_round()
 
 func _match_end() -> void:
-	if Input.is_action_just_pressed("ui_accept"):
-		_state.start_match()
-		_reset_round()
+	_delay -= 1
+	if _delay <= 0:
+		MatchSelection.winner = _state.match_winner()
+		get_tree().change_scene_to_file("res://scenes/match_result.tscn")
 
 func _reset_round() -> void:
 	_p1.reset_for_round(P1_SPAWN_X)

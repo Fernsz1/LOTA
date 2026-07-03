@@ -12,9 +12,19 @@
 [ext_resource type="Script" path="res://scripts/match/match_manager.gd" id="8_mmgr"]
 [ext_resource type="Resource" path="res://characters/jerb/jerb_data.tres" id="11_jerbdata"]
 [ext_resource type="Resource" path="res://characters/rainne/rainne_data.tres" id="12_rainnedata"]
+[ext_resource type="PackedScene" path="res://scenes/quit_confirm.tscn" id="13_quitconfirm"]
 
 [node name="Main" type="Node2D" unique_id=175851764]
 script = ExtResource("1_main")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.07, 0.08, 0.11, 1)
 
 [node name="Floor" type="ColorRect" parent="." unique_id=180430301]
 offset_top = 560.0
@@ -56,3 +66,5 @@ script = ExtResource("8_mmgr")
 p1_path = NodePath("../P1")
 p2_path = NodePath("../P2")
 hud_path = NodePath("../MatchHUD")
+
+[node name="QuitConfirm" parent="." instance=ExtResource("13_quitconfirm")]

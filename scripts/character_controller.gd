@@ -90,6 +90,16 @@ func _ready() -> void:
 	reset_physics_interpolation()
 
 
+## Character-select hook — call once, same frame as _ready (e.g. from the spawning
+## scene's own _ready), to override whatever CharacterData/box_color the scene
+## authored. Re-runs the same stat/move application _ready uses, just later.
+func set_character(data: CharacterData, color: Color) -> void:
+	character_data = data
+	_apply_character_data()
+	box_color = color
+	_box.color = color
+
+
 ## 3.4 — pull stats + moves from CharacterData (if assigned). Called first in _ready.
 func _apply_character_data() -> void:
 	if character_data == null:
