@@ -15,6 +15,10 @@ run/main_scene="res://scenes/main_menu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
+[audio]
+
+buses/default_bus_layout="res://audio/default_bus_layout.tres"
+
 [autoload]
 
 ControlsConfig="*res://scripts/controls_config.gd"
@@ -27,7 +31,6 @@ _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
-window/size/initial_position_type=1
 window/size/mode=3
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
@@ -144,10 +147,6 @@ debug_panel={
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194333,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
 ]
 }
-
-[audio]
-
-buses/default_bus_layout="res://audio/default_bus_layout.tres"
 
 [physics]
 
