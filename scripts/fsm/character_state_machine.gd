@@ -14,16 +14,20 @@ enum State {
 	DASH, BACKDASH, BLOCK,
 	FAST_ATTACK, HEAVY_ATTACK, SKILL,
 	HITSTUN, BLOCKSTUN, KNOCKDOWN, GETUP, KO,
+	GRAB_ATTEMPT, GRABBED, THROW_RELEASE,   # 6.4 grabs — appended to keep ordinals stable
 }
 
-# Targets a reaction may force into (from any non-KO state).
-const _FORCE_TARGETS: Array[State] = [State.HITSTUN, State.BLOCKSTUN, State.KNOCKDOWN, State.KO]
+# Targets a reaction may force into (from any non-KO state). GRABBED is the
+# victim's entry into a connected throw (6.4).
+const _FORCE_TARGETS: Array[State] = [
+	State.HITSTUN, State.BLOCKSTUN, State.KNOCKDOWN, State.KO, State.GRABBED,
+]
 
 # Where an actionable ground state may go on a player/logic request.
 const _ACTIONABLE_EXITS: Array[State] = [
 	State.IDLE, State.WALK_F, State.WALK_B, State.CROUCH, State.BLOCK,
 	State.JUMP_START, State.DASH, State.BACKDASH,
-	State.FAST_ATTACK, State.HEAVY_ATTACK, State.SKILL,
+	State.FAST_ATTACK, State.HEAVY_ATTACK, State.SKILL, State.GRAB_ATTEMPT,
 ]
 
 var state: State = State.IDLE
@@ -90,6 +94,12 @@ func can_transition(to: State) -> bool:
 			return to == State.IDLE or to == State.JUMP_AIR
 		State.KNOCKDOWN:
 			return to == State.GETUP
+		# 6.4 grabs: attempt resolves to IDLE (whiff) or THROW_RELEASE (connect);
+		# the throw and the held victim both resolve to IDLE (release/tech/abort).
+		State.GRAB_ATTEMPT:
+			return to == State.IDLE or to == State.THROW_RELEASE
+		State.THROW_RELEASE, State.GRABBED:
+			return to == State.IDLE
 	return false
 
 
@@ -122,11 +132,13 @@ static func is_attacking(s: State) -> bool:
 	return s == State.FAST_ATTACK or s == State.HEAVY_ATTACK or s == State.SKILL
 
 static func is_in_reaction(s: State) -> bool:
-	return s == State.HITSTUN or s == State.BLOCKSTUN or s == State.KNOCKDOWN
+	return s == State.HITSTUN or s == State.BLOCKSTUN or s == State.KNOCKDOWN \
+		or s == State.GRABBED
 
 static func is_busy(s: State) -> bool:
 	return s == State.JUMP_START or s == State.JUMP_LAND or s == State.DASH \
-		or s == State.BACKDASH or is_attacking(s) or s == State.GETUP
+		or s == State.BACKDASH or is_attacking(s) or s == State.GETUP \
+		or s == State.GRAB_ATTEMPT or s == State.THROW_RELEASE
 
 static func is_ko(s: State) -> bool:
 	return s == State.KO

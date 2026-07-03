@@ -17,6 +17,9 @@ const WALL_X: float = 640.0
 
 const PROJECTILE_SCENE := preload("res://scenes/projectile.tscn")
 var _projectiles: Array[Projectile] = []
+# 6.4 — one live throw per arena (left: P1/P1Dummy, right: P2/P2Dummy).
+var _throw_left: ThrowSequencer = null
+var _throw_right: ThrowSequencer = null
 
 
 func _ready() -> void:
@@ -37,13 +40,13 @@ func _ready() -> void:
 func _physics_process(_delta: float) -> void:
 	_update_facing()
 	_resolve_combat()
+	_resolve_throws()
 	_resolve_projectiles()
 	_resolve_pushboxes()
-	var max_hp: float = float(CharacterController.MAX_HEALTH)
-	_hud.set_health(1, _p1.health / max_hp)
-	_hud.set_health(2, _p1_dummy.health / max_hp)
-	_hud.set_health(3, _p2_dummy.health / max_hp)
-	_hud.set_health(4, _p2.health / max_hp)
+	_hud.set_health(1, _p1.health / float(_p1.get_max_health()))
+	_hud.set_health(2, _p1_dummy.health / float(_p1_dummy.get_max_health()))
+	_hud.set_health(3, _p2_dummy.health / float(_p2_dummy.get_max_health()))
+	_hud.set_health(4, _p2.health / float(_p2.get_max_health()))
 	# Live move readout for the two human players
 	_hud.set_move_readout(1, _p1.get_current_move(), _p1.get_frame_in_state())
 	_hud.set_move_readout(2, _p2.get_current_move(), _p2.get_frame_in_state())
@@ -91,6 +94,25 @@ func _try_hit(attacker: CharacterController, defender: CharacterController) -> v
 	var adv: int = stun - remaining
 	var side: int = 1 if (attacker == _p1 or attacker == _p1_dummy) else 2
 	_hud.show_advantage(side, adv)
+
+
+# 6.4 — grab detection + throw progression, one throw per arena. Same shape as
+# the match scene's _resolve_throws, per split-arena pair.
+func _resolve_throws() -> void:
+	_throw_left = _step_throw(_throw_left, _p1, _p1_dummy)
+	_throw_right = _step_throw(_throw_right, _p2, _p2_dummy)
+
+
+func _step_throw(throw: ThrowSequencer, a: CharacterController,
+		b: CharacterController) -> ThrowSequencer:
+	if a.is_frozen() or b.is_frozen():
+		return throw
+	if throw != null:
+		return null if throw.step() else throw
+	throw = ThrowSequencer.try_start(a, b)
+	if throw == null:
+		throw = ThrowSequencer.try_start(b, a)
+	return throw
 
 
 func _on_projectile_requested(data: ProjectileData, origin: Vector2,
@@ -154,8 +176,11 @@ func get_projectile_hitboxes() -> Array[Rect2]:
 
 
 func _resolve_pushboxes() -> void:
-	_resolve_pair(LEFT_WALL_X, WALL_X, _p1, _p1_dummy)
-	_resolve_pair(WALL_X, RIGHT_WALL_X, _p2_dummy, _p2)
+	# Separation pauses per-arena during a throw (see main.gd for why).
+	if _throw_left == null:
+		_resolve_pair(LEFT_WALL_X, WALL_X, _p1, _p1_dummy)
+	if _throw_right == null:
+		_resolve_pair(WALL_X, RIGHT_WALL_X, _p2_dummy, _p2)
 
 
 func _resolve_pair(left_bound: float, right_bound: float,

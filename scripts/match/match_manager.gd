@@ -106,5 +106,6 @@ func _reset_round() -> void:
 	_hud.announce("ROUND %d" % (_state.p1_rounds + _state.p2_rounds + 1))
 
 func _update_bars() -> void:
-	_hud.set_health(1, float(_p1.health) / float(CharacterController.MAX_HEALTH))
-	_hud.set_health(2, float(_p2.health) / float(CharacterController.MAX_HEALTH))
+	# 6.4 — per-character max health (Jacob runs 1150); bars are fractions of it.
+	_hud.set_health(1, float(_p1.health) / float(_p1.get_max_health()))
+	_hud.set_health(2, float(_p2.health) / float(_p2.get_max_health()))

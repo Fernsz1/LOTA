@@ -32,6 +32,15 @@ const PD := preload("res://scripts/combat/projectile_data.gd")
 @export var cancel_window_start: int = -1  # 3.5: frame_in_state when cancel input is accepted; -1 = no cancel
 @export var cancel_window_end: int = -1    # 3.5: frame_in_state when cancel closes; -1 = last active frame (startup+active-1)
 
+# 6.4 — command grabs. When is_grab, the controller enters GRAB_ATTEMPT instead
+# of a strike state and `hitboxes` become the GRAB box (checked vs hurtboxes,
+# unblockable, gated by GrabRules). startup/active/recovery keep their meaning
+# (active = connect window, recovery = whiff punish). hitstun/blockstun unused.
+@export var is_grab: bool = false
+@export var throw_release_frames: int = 30   # length of THROW_RELEASE; damage lands at the end
+@export var tech_window: int = 8             # frames from GRABBED entry where victim FAST techs; 0 = untechable
+@export var throw_launch_y: float = -6.0     # victim vertical pop at release (falls into KNOCKDOWN)
+
 ## Total length; spans are disjoint so it's a clean sum (feel-reference §3).
 func total() -> int:
 	return startup + active + recovery
@@ -88,6 +97,17 @@ func validate() -> bool:
 	if damage < 0 or hitstun < 0 or blockstun < 0 or hitstop < 0:
 		push_error("MoveData '%s': negative damage/stun/hitstop" % move_name)
 		ok = false
-	if hitstun <= blockstun:
+	if is_grab:
+		if throw_release_frames < 1:
+			push_error("MoveData '%s': grab needs throw_release_frames >= 1" % move_name)
+			ok = false
+		if tech_window < 0:
+			push_error("MoveData '%s': negative tech_window" % move_name)
+			ok = false
+		if projectile != null:
+			push_error("MoveData '%s': a grab cannot also spawn a projectile" % move_name)
+			ok = false
+	elif hitstun <= blockstun:
+		# Strike-only smell — grabs don't use hitstun/blockstun at all.
 		push_warning("MoveData '%s': hitstun <= blockstun inverts block incentive (feel-reference §7)" % move_name)
 	return ok

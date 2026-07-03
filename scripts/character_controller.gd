@@ -35,6 +35,7 @@ var _walk_b_speed: float = WALK_B_SPEED
 var _jump_velocity: float = JUMP_VELOCITY
 var _jump_f_speed: float = JUMP_F_SPEED
 var _gravity: float = GRAVITY
+var _max_health: int = MAX_HEALTH     # 6.4 — per-character (CharacterData.max_health)
 
 var _fsm: CharacterStateMachine = CharacterStateMachine.new()
 var _vel: Vector2 = Vector2.ZERO
@@ -113,6 +114,8 @@ func _apply_character_data() -> void:
 	_jump_velocity = character_data.jump_velocity
 	_jump_f_speed = character_data.jump_f_speed
 	_gravity = character_data.gravity
+	_max_health = character_data.max_health
+	health = _max_health
 
 
 func _physics_process(_delta: float) -> void:
@@ -167,6 +170,12 @@ func _resolve_busy_exits(buf: InputBuffer) -> void:
 					_fsm.request(CharacterStateMachine.State.IDLE)
 			elif _current_move.in_cancel_window(_fsm.frame_in_state):
 				_try_cancel_input(buf)
+		CharacterStateMachine.State.GRAB_ATTEMPT:
+			# 6.4 — whiffed grab recovers to IDLE. A CONNECT is resolved externally
+			# (ThrowSequencer moves us to THROW_RELEASE before this fires). GRABBED
+			# and THROW_RELEASE have no timed exit here: the sequencer owns them.
+			if _current_move == null or _fsm.frame_in_state >= _current_move.total():
+				_fsm.request(CharacterStateMachine.State.IDLE)
 		CharacterStateMachine.State.HITSTUN, CharacterStateMachine.State.BLOCKSTUN:
 			if _fsm.frame_in_state >= _stun_frames:        # 2.4 stun length
 				if position.y < _floor_y:
@@ -216,16 +225,17 @@ func _process_input(buf: InputBuffer) -> void:
 	# Attacks (2.3) — buffered presses, checked while actionable. Priority: Ultimate > Heavy > Skill > Fast.
 	# On a successful start, arm the move and clear the one-hit latch.
 	# NOTE: Treating ultimate as a second SKILL slot to avoid changing FSM structure (Phase 3.1 constraint).
+	# 6.4: a slot whose move is_grab enters GRAB_ATTEMPT instead (grapplers put grabs on SKILL/ULT).
 	if move_ultimate != null and buf.pressed_within(InputBuffer.ULTIMATE, ATTACK_BUFFER) \
-			and _fsm.request(CharacterStateMachine.State.SKILL):
+			and _fsm.request(_attack_state_for(move_ultimate, CharacterStateMachine.State.SKILL)):
 		_arm(move_ultimate)
 		return
 	if move_heavy != null and buf.pressed_within(InputBuffer.HEAVY, ATTACK_BUFFER) \
-			and _fsm.request(CharacterStateMachine.State.HEAVY_ATTACK):
+			and _fsm.request(_attack_state_for(move_heavy, CharacterStateMachine.State.HEAVY_ATTACK)):
 		_arm(move_heavy)
 		return
 	if move_skill != null and buf.pressed_within(InputBuffer.SKILL, ATTACK_BUFFER) \
-			and _fsm.request(CharacterStateMachine.State.SKILL):
+			and _fsm.request(_attack_state_for(move_skill, CharacterStateMachine.State.SKILL)):
 		_arm(move_skill)
 		return
 	if move_fast != null and buf.pressed_within(InputBuffer.FAST, ATTACK_BUFFER) \
@@ -295,6 +305,9 @@ func _apply_movement() -> void:
 			else:
 				_vel.y = 0.0
 			_vel.x = 0.0
+		CharacterStateMachine.State.GRABBED, CharacterStateMachine.State.THROW_RELEASE:
+			# 6.4 — locked in a throw; the ThrowSequencer positions the victim.
+			_vel = Vector2.ZERO
 		_:
 			# IDLE, CROUCH, BLOCK, JUMP_START, JUMP_LAND, GETUP — no lateral movement.
 			_vel.x = 0.0
@@ -357,6 +370,12 @@ func _resolve_attack() -> void:
 		active_hitboxes_local = []
 
 
+# 6.4 — the FSM state a move slot enters: grabs go to GRAB_ATTEMPT, strikes to
+# their normal state.
+func _attack_state_for(move: MoveData, strike_state: CharacterStateMachine.State) -> CharacterStateMachine.State:
+	return CharacterStateMachine.State.GRAB_ATTEMPT if move.is_grab else strike_state
+
+
 ## Arm a freshly-started attack: set the move and clear per-attack latches.
 func _arm(move: MoveData) -> void:
 	_current_move = move
@@ -367,12 +386,15 @@ func _arm(move: MoveData) -> void:
 # 3.5 — called only while in_cancel_window() is true. Checks buffered attack inputs and
 # fires the first legal cancel in escalation order. Downgrade cancels (heavy→fast) are
 # not allowed; order is fast→heavy, (fast|heavy)→skill, any_attack→ultimate.
+# 6.4: grab moves are never cancel targets — command grabs must be raw.
 func _try_cancel_input(buf: InputBuffer) -> void:
 	var cur := _fsm.state
-	if move_ultimate != null and buf.pressed_within(InputBuffer.ULTIMATE, ATTACK_BUFFER):
+	if move_ultimate != null and not move_ultimate.is_grab \
+			and buf.pressed_within(InputBuffer.ULTIMATE, ATTACK_BUFFER):
 		_cancel_into(CharacterStateMachine.State.SKILL, move_ultimate)
 		return
-	if move_skill != null and cur != CharacterStateMachine.State.SKILL \
+	if move_skill != null and not move_skill.is_grab \
+			and cur != CharacterStateMachine.State.SKILL \
 			and buf.pressed_within(InputBuffer.SKILL, ATTACK_BUFFER):
 		_cancel_into(CharacterStateMachine.State.SKILL, move_skill)
 		return
@@ -416,9 +438,11 @@ func get_frame_in_state() -> int:
 func is_frozen() -> bool:
 	return _hitstop > 0
 
-## Invulnerable on wake-up (GETUP), when KO'd, or during a move's startup-invuln window (3.4).
+## Invulnerable on wake-up (GETUP), when KO'd, while held in a throw (GRABBED, 6.4),
+## or during a move's startup-invuln window (3.4).
 func is_invulnerable() -> bool:
-	if _fsm.state == CharacterStateMachine.State.GETUP or _fsm.state == CharacterStateMachine.State.KO:
+	if _fsm.state == CharacterStateMachine.State.GETUP or _fsm.state == CharacterStateMachine.State.KO \
+			or _fsm.state == CharacterStateMachine.State.GRABBED:
 		return true
 	if _current_move != null and CharacterStateMachine.is_attacking(_fsm.state) \
 			and _current_move.is_invuln_at(_fsm.frame_in_state):
@@ -493,14 +517,75 @@ func apply_block_proj(data: ProjectileData, push_dir: float) -> void:
 	_pushback_vel = data.pushback_block * push_dir
 	_fsm.on_blocked()
 
+# --- Grab/throw API (6.4) — driven by ThrowSequencer (match/training scenes) ---
+
+## World-space grab box while a grab move is in its active connect window (empty
+## otherwise). Separate from get_hitboxes() so strike resolution never sees it.
+func get_grab_boxes() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	if _fsm.state != CharacterStateMachine.State.GRAB_ATTEMPT:
+		return out
+	if _move_has_hit or _current_move == null or not _current_move.is_grab:
+		return out
+	for h in _current_move.hitboxes_at(_fsm.frame_in_state):
+		out.append(CombatBoxes.to_world(h, position, facing))
+	return out
+
+## The grab move being attempted or thrown with (null outside grab states).
+func get_grab_move() -> MoveData:
+	if _current_move == null or not _current_move.is_grab:
+		return null
+	if _fsm.state != CharacterStateMachine.State.GRAB_ATTEMPT \
+			and _fsm.state != CharacterStateMachine.State.THROW_RELEASE:
+		return null
+	return _current_move
+
+## Attacker side of a connect: latch the one-connect flag and start the throw.
+func begin_throw() -> void:
+	mark_move_hit()
+	_fsm.request(CharacterStateMachine.State.THROW_RELEASE)
+
+## Attacker released (throw finished or teched) — back to neutral.
+func end_throw() -> void:
+	if _fsm.state == CharacterStateMachine.State.THROW_RELEASE:
+		_fsm.request(CharacterStateMachine.State.IDLE)
+
+## Victim side of a connect: forced into GRABBED, fully passive (no input — not
+## actionable; no movement — sequencer snaps position; strike-invulnerable).
+func apply_grabbed() -> void:
+	_current_move = null
+	active_hitboxes_local = []
+	_vel = Vector2.ZERO
+	_pushback_vel = 0.0
+	_fsm.force(CharacterStateMachine.State.GRABBED)
+
+## Victim freed without damage (tech, or the thrower got interrupted).
+func release_from_grab() -> void:
+	if _fsm.state == CharacterStateMachine.State.GRABBED:
+		_fsm.request(CharacterStateMachine.State.IDLE)
+
+## The slam: damage + vertical pop into KNOCKDOWN. Lifted 1px off the floor so
+## the knockdown arc integrates gravity instead of zeroing the pop immediately.
+func apply_throw(move: MoveData) -> void:
+	health = maxi(0, health - move.damage)
+	position.y = minf(position.y, _floor_y - 1.0)
+	_vel = Vector2(0.0, move.throw_launch_y)
+	_pushback_vel = 0.0
+	_fsm.on_launched()   # → KNOCKDOWN
+
+
 ## Force the KO state on the round loser (2.6).
 func force_ko() -> void:
 	_fsm.on_ko()
 
+## Per-character health ceiling (6.4 — grapplers run tanky). HUD bars divide by this.
+func get_max_health() -> int:
+	return _max_health
+
 ## Reset everything for a fresh round (2.6).
 func reset_for_round(spawn_x: float) -> void:
 	position = Vector2(spawn_x, _floor_y)
-	health = MAX_HEALTH
+	health = _max_health
 	_vel = Vector2.ZERO
 	_hitstop = 0
 	_stun_frames = 0

@@ -44,10 +44,10 @@ var _p2d_regen_timer: int = 0
 
 
 func _physics_process(_delta: float) -> void:
-	if p1_infinite:       _p1.health = CharacterController.MAX_HEALTH
-	if p1_dummy_infinite: _p1_dummy.health = CharacterController.MAX_HEALTH
-	if p2_dummy_infinite: _p2_dummy.health = CharacterController.MAX_HEALTH
-	if p2_infinite:       _p2.health = CharacterController.MAX_HEALTH
+	if p1_infinite:       _p1.health = _p1.get_max_health()
+	if p1_dummy_infinite: _p1_dummy.health = _p1_dummy.get_max_health()
+	if p2_dummy_infinite: _p2_dummy.health = _p2_dummy.get_max_health()
+	if p2_infinite:       _p2.health = _p2.get_max_health()
 	# Drive dummies via virtual player slots (player_index 3 and 4)
 	InputManager.set_override(3, _mode_bits(_p1_dummy, _p1, p1_dummy_mode, _p1_dummy_jump_timer))
 	InputManager.set_override(4, _mode_bits(_p2_dummy, _p2, p2_dummy_mode, _p2_dummy_jump_timer))
@@ -60,7 +60,7 @@ func _physics_process(_delta: float) -> void:
 		elif _p1d_regen_timer < REGEN_DELAY:
 			_p1d_regen_timer += 1
 		else:
-			_p1_dummy.health = mini(_p1_dummy.health + REGEN_PER_FRAME, CharacterController.MAX_HEALTH)
+			_p1_dummy.health = mini(_p1_dummy.health + REGEN_PER_FRAME, _p1_dummy.get_max_health())
 		_p1d_prev_hp = _p1_dummy.health
 	if not p2_dummy_infinite:
 		if _p2_dummy.health < _p2d_prev_hp:
@@ -68,7 +68,7 @@ func _physics_process(_delta: float) -> void:
 		elif _p2d_regen_timer < REGEN_DELAY:
 			_p2d_regen_timer += 1
 		else:
-			_p2_dummy.health = mini(_p2_dummy.health + REGEN_PER_FRAME, CharacterController.MAX_HEALTH)
+			_p2_dummy.health = mini(_p2_dummy.health + REGEN_PER_FRAME, _p2_dummy.get_max_health())
 		_p2d_prev_hp = _p2_dummy.health
 	_hud.set_player_info(1, p1_infinite)
 	_hud.set_dummy_info(1, MODE_LABELS[p1_dummy_mode], p1_dummy_infinite)

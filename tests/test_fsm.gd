@@ -28,6 +28,7 @@ func _initialize() -> void:
 	_test_same_state_request()
 	_test_frame_counter()
 	_test_convenience_wrappers()
+	_test_grab_states()
 	print("\n%d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -127,6 +128,56 @@ func _test_frame_counter() -> void:
 	sm.tick()
 	_check(sm.frame_in_state == 1, "next tick -> 1")
 	_check(sm.prev_state == CSM.State.IDLE, "prev_state tracks the previous state")
+
+# 6.4 — grab states (GRAB_ATTEMPT / GRABBED / THROW_RELEASE), per the design in
+# docs/superpowers/specs/2026-07-03-jacob-grappler-design.md.
+func _test_grab_states() -> void:
+	# categories
+	_check(CSM.is_busy(CSM.State.GRAB_ATTEMPT), "GRAB_ATTEMPT is busy")
+	_check(CSM.is_busy(CSM.State.THROW_RELEASE), "THROW_RELEASE is busy")
+	_check(CSM.is_in_reaction(CSM.State.GRABBED), "GRABBED is reaction")
+	_check(not CSM.is_attacking(CSM.State.GRAB_ATTEMPT), "GRAB_ATTEMPT is NOT attacking (no strike hitboxes)")
+	_check(not CSM.is_actionable(CSM.State.GRABBED), "GRABBED is not actionable")
+	_check(CSM.is_grounded(CSM.State.GRAB_ATTEMPT), "GRAB_ATTEMPT is grounded")
+
+	# attacker path: actionable -> GRAB_ATTEMPT -> THROW_RELEASE (connect) -> IDLE
+	var sm := CSM.new()
+	_check(sm.request(CSM.State.GRAB_ATTEMPT), "IDLE -> GRAB_ATTEMPT allowed")
+	_check(not sm.request(CSM.State.FAST_ATTACK), "GRAB_ATTEMPT -> FAST_ATTACK rejected (busy)")
+	_check(sm.request(CSM.State.THROW_RELEASE), "GRAB_ATTEMPT -> THROW_RELEASE allowed (connect)")
+	_check(not sm.request(CSM.State.GRAB_ATTEMPT), "THROW_RELEASE -> GRAB_ATTEMPT rejected")
+	_check(sm.request(CSM.State.IDLE), "THROW_RELEASE -> IDLE allowed (release)")
+
+	# attacker whiff path: GRAB_ATTEMPT -> IDLE
+	sm = CSM.new()
+	sm.request(CSM.State.WALK_F)
+	_check(sm.request(CSM.State.GRAB_ATTEMPT), "WALK_F -> GRAB_ATTEMPT allowed")
+	_check(sm.request(CSM.State.IDLE), "GRAB_ATTEMPT -> IDLE allowed (whiff)")
+
+	# victim path: forced GRABBED; tech exits to IDLE; throw forces KNOCKDOWN
+	sm = CSM.new()
+	sm.request(CSM.State.HEAVY_ATTACK)              # grabbed out of recovery
+	sm.force(CSM.State.GRABBED)
+	_check(sm.state == CSM.State.GRABBED, "force(GRABBED) interrupts an attack")
+	_check(not sm.request(CSM.State.WALK_F), "GRABBED -> WALK_F rejected (held)")
+	_check(sm.request(CSM.State.IDLE), "GRABBED -> IDLE allowed (tech/abort)")
+	sm.force(CSM.State.GRABBED)
+	sm.force(CSM.State.KNOCKDOWN)
+	_check(sm.state == CSM.State.KNOCKDOWN, "GRABBED -> forced KNOCKDOWN (throw lands)")
+
+	# interrupt: the thrower can still be forced into reactions / KO
+	sm = CSM.new()
+	sm.request(CSM.State.GRAB_ATTEMPT)
+	sm.request(CSM.State.THROW_RELEASE)
+	sm.force(CSM.State.HITSTUN)
+	_check(sm.state == CSM.State.HITSTUN, "THROW_RELEASE interrupted by force(HITSTUN)")
+
+	# airborne cannot request a grab
+	sm = CSM.new()
+	sm.request(CSM.State.JUMP_START)
+	sm.request(CSM.State.JUMP_AIR)
+	_check(not sm.request(CSM.State.GRAB_ATTEMPT), "JUMP_AIR -> GRAB_ATTEMPT rejected (grabs are grounded)")
+
 
 func _test_convenience_wrappers() -> void:
 	var sm := CSM.new()
