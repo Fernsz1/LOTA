@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/character/character_data.gd" id="1_cd"]
+[ext_resource type="Resource" path="res://characters/sofia/moves/sipa.tres" id="2_fast"]
+[ext_resource type="Resource" path="res://characters/sofia/moves/biakid.tres" id="3_heavy"]
+[ext_resource type="Resource" path="res://characters/sofia/moves/dash_kick.tres" id="4_skill"]
+[ext_resource type="Resource" path="res://characters/sofia/moves/ultimate.tres" id="5_ult"]
+
+[resource]
+script = ExtResource("1_cd")
+character_name = "Sofia"
+max_health = 900
+walk_speed = 5.6
+walk_b_speed = 4.6
+jump_velocity = -13.5
+jump_f_speed = 4.3
+gravity = 0.63
+dash_speed = 11.0
+dash_frames = 14
+backdash_speed = 8.5
+backdash_frames = 16
+move_fast = ExtResource("2_fast")
+move_heavy = ExtResource("3_heavy")
+move_skill = ExtResource("4_skill")
+move_ultimate = ExtResource("5_ult")

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="MoveData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
+
+[resource]
+script = ExtResource("1_move")
+move_name = "sofia_dash_kick"
+startup = 10
+active = 6
+recovery = 16
+hitboxes = Array[Rect2]([Rect2(18, -64, 44, 26)])
+damage = 90
+hitstun = 20
+blockstun = 12
+hitstop = 10
+pushback_hit = 3.0
+pushback_block = 6.0
+causes_knockdown = true
+move_velocity = 11.0
