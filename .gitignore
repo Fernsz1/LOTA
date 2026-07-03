@@ -18,6 +18,7 @@ mono_crash.*.json
 
 # Local-only dev scratch (plans, notes — not part of the shipped project)
 .local/
+CLAUDE.local.md
 
 # OS / editor cruft
 .DS_Store

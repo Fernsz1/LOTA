@@ -15,6 +15,7 @@
 [ext_resource type="Resource" path="res://characters/rainne/moves/poke.tres" id="13_poke"]
 [ext_resource type="Resource" path="res://characters/rainne/moves/projectile.tres" id="14_rprojmove"]
 [ext_resource type="Resource" path="res://characters/rainne/moves/ultimate.tres" id="15_rultimate"]
+[ext_resource type="PackedScene" path="res://scenes/quit_confirm.tscn" id="16_quitconfirm"]
 
 [node name="Training" type="Node2D"]
 script = ExtResource("1_tmain")
@@ -92,3 +93,5 @@ p1_dummy_path = NodePath("../P1Dummy")
 p2_dummy_path = NodePath("../P2Dummy")
 p2_path = NodePath("../P2")
 hud_path = NodePath("../TrainingHUD")
+
+[node name="QuitConfirm" parent="." instance=ExtResource("16_quitconfirm")]

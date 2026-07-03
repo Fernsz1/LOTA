@@ -81,7 +81,3 @@ func _on_reset_pressed() -> void:
 	ControlsConfig.reset_to_defaults()
 	for action: String in _action_buttons:
 		_action_buttons[action].text = ControlsConfig.get_key_display(action)
-
-
-func _on_back_pressed() -> void:
-	visible = false

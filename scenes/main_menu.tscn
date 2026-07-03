@@ -333,4 +333,4 @@ text = "BACK"
 [connection signal="pressed" from="SettingsPanel/Panel/VBox/ControlsButton" to="." method="_on_controls_pressed"]
 [connection signal="pressed" from="SettingsPanel/Panel/VBox/CloseButton" to="." method="_on_settings_close_pressed"]
 [connection signal="pressed" from="ControlsPanel/Panel/VBox/ResetButton" to="ControlsPanel" method="_on_reset_pressed"]
-[connection signal="pressed" from="ControlsPanel/Panel/VBox/ControlsBackButton" to="ControlsPanel" method="_on_back_pressed"]
+[connection signal="pressed" from="ControlsPanel/Panel/VBox/ControlsBackButton" to="." method="_on_controls_back_pressed"]

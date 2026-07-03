@@ -48,6 +48,11 @@ func _on_controls_pressed() -> void:
 	_controls_panel.visible = true
 
 
+func _on_controls_back_pressed() -> void:
+	_controls_panel.visible = false
+	_settings_panel.visible = true
+
+
 func _on_master_volume_changed(value: float) -> void:
 	AudioServer.set_bus_volume_db(_master_bus, linear_to_db(value))
 

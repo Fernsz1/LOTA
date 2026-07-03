@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://scripts/match/match_manager.gd" id="8_mmgr"]
 [ext_resource type="Resource" path="res://characters/jerb/jerb_data.tres" id="11_jerbdata"]
 [ext_resource type="Resource" path="res://characters/rainne/rainne_data.tres" id="12_rainnedata"]
+[ext_resource type="PackedScene" path="res://scenes/quit_confirm.tscn" id="13_quitconfirm"]
 
 [node name="Main" type="Node2D" unique_id=175851764]
 script = ExtResource("1_main")
@@ -56,3 +57,5 @@ script = ExtResource("8_mmgr")
 p1_path = NodePath("../P1")
 p2_path = NodePath("../P2")
 hud_path = NodePath("../MatchHUD")
+
+[node name="QuitConfirm" parent="." instance=ExtResource("13_quitconfirm")]
