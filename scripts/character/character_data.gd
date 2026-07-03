@@ -9,6 +9,13 @@ extends Resource
 @export var jump_f_speed: float = 3.5           # px/frame, horizontal on fwd/back jump
 @export var gravity: float = 0.565              # px/frame^2 added each airborne frame
 
+# 6.3 — per-character dash stats (defaults == the controller consts → Jerb/Rainne
+# author nothing and stay byte-identical).
+@export var dash_speed: float = 9.0             # px/frame during DASH
+@export var dash_frames: int = 16               # DASH duration
+@export var backdash_speed: float = 7.0         # px/frame during BACKDASH (applied -facing)
+@export var backdash_frames: int = 20           # BACKDASH duration
+
 @export var move_fast: MoveData
 @export var move_heavy: MoveData
 @export var move_skill: MoveData

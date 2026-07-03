@@ -26,6 +26,9 @@ extends Resource
 @export var projectile_spawn_frame: int = -1     # frame_in_state to spawn on; -1 = first active (startup)
 @export var cancel_window_start: int = -1  # 3.5: frame_in_state when cancel input is accepted; -1 = no cancel
 @export var cancel_window_end: int = -1    # 3.5: frame_in_state when cancel closes; -1 = last active frame (startup+active-1)
+@export var move_velocity: float = 0.0     # 6.3: px/frame along facing (+x = forward) while in the window; 0 = rooted
+@export var move_velocity_start: int = 0   # 6.3: first frame_in_state the self-movement applies
+@export var move_velocity_end: int = -1    # 6.3: last frame_in_state (inclusive); -1 = last active frame (startup+active-1)
 
 ## Total length; spans are disjoint so it's a clean sum (feel-reference §3).
 func total() -> int:
@@ -61,6 +64,18 @@ func in_cancel_window(frame_in_state: int) -> bool:
 	var end: int = cancel_window_end if cancel_window_end >= 0 else startup + active - 1
 	return frame_in_state >= cancel_window_start and frame_in_state <= end
 
+## 6.3 — self-movement (px/frame along facing) live on this in-state frame; 0 otherwise.
+## The seam mirroring hitboxes_at(): the controller reads this to drive a move's own
+## travel (dash kick, storm kick) without any state-specific logic. Always 0 for the
+## default (move_velocity == 0), so existing moves are byte-identical.
+func velocity_at(frame_in_state: int) -> float:
+	if move_velocity == 0.0:
+		return 0.0
+	var end: int = move_velocity_end if move_velocity_end >= 0 else startup + active - 1
+	if frame_in_state >= move_velocity_start and frame_in_state <= end:
+		return move_velocity
+	return 0.0
+
 ## 3.4 — is the attacker invulnerable on this in-state frame (startup invuln window)?
 func is_invuln_at(frame_in_state: int) -> bool:
 	return invuln_startup > 0 and frame_in_state < invuln_startup
@@ -85,4 +100,9 @@ func validate() -> bool:
 		ok = false
 	if hitstun <= blockstun:
 		push_warning("MoveData '%s': hitstun <= blockstun inverts block incentive (feel-reference §7)" % move_name)
+	if move_velocity != 0.0:
+		var vend: int = move_velocity_end if move_velocity_end >= 0 else startup + active - 1
+		if vend < move_velocity_start:
+			push_error("MoveData '%s': move_velocity window inverted (end %d < start %d)" % [move_name, vend, move_velocity_start])
+			ok = false
 	return ok

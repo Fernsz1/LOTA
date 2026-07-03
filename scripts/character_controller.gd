@@ -35,6 +35,11 @@ var _walk_b_speed: float = WALK_B_SPEED
 var _jump_velocity: float = JUMP_VELOCITY
 var _jump_f_speed: float = JUMP_F_SPEED
 var _gravity: float = GRAVITY
+# 6.3 — per-character dash stats (defaults = the consts; overridden by CharacterData).
+var _dash_speed: float = DASH_SPEED
+var _dash_frames: int = DASH_TOTAL
+var _backdash_speed: float = BACKDASH_SPEED
+var _backdash_frames: int = BACKDASH_TOTAL
 
 var _fsm: CharacterStateMachine = CharacterStateMachine.new()
 var _vel: Vector2 = Vector2.ZERO
@@ -113,6 +118,10 @@ func _apply_character_data() -> void:
 	_jump_velocity = character_data.jump_velocity
 	_jump_f_speed = character_data.jump_f_speed
 	_gravity = character_data.gravity
+	_dash_speed = character_data.dash_speed
+	_dash_frames = character_data.dash_frames
+	_backdash_speed = character_data.backdash_speed
+	_backdash_frames = character_data.backdash_frames
 
 
 func _physics_process(_delta: float) -> void:
@@ -153,10 +162,10 @@ func _resolve_busy_exits(buf: InputBuffer) -> void:
 			if _fsm.frame_in_state >= JUMP_LAND_FRAMES:
 				_fsm.request(CharacterStateMachine.State.IDLE)
 		CharacterStateMachine.State.DASH:
-			if _fsm.frame_in_state >= DASH_TOTAL:
+			if _fsm.frame_in_state >= _dash_frames:
 				_fsm.request(CharacterStateMachine.State.IDLE)
 		CharacterStateMachine.State.BACKDASH:
-			if _fsm.frame_in_state >= BACKDASH_TOTAL:
+			if _fsm.frame_in_state >= _backdash_frames:
 				_fsm.request(CharacterStateMachine.State.IDLE)
 		CharacterStateMachine.State.FAST_ATTACK, CharacterStateMachine.State.HEAVY_ATTACK, \
 		CharacterStateMachine.State.SKILL:
@@ -273,10 +282,10 @@ func _apply_movement() -> void:
 			_vel.x = -_walk_b_speed * facing
 			_vel.y = 0.0
 		CharacterStateMachine.State.DASH:
-			_vel.x = DASH_SPEED * facing
+			_vel.x = _dash_speed * facing
 			_vel.y = 0.0
 		CharacterStateMachine.State.BACKDASH:
-			_vel.x = -BACKDASH_SPEED * facing
+			_vel.x = -_backdash_speed * facing
 			_vel.y = 0.0
 		CharacterStateMachine.State.JUMP_AIR, CharacterStateMachine.State.JUMP_F, \
 		CharacterStateMachine.State.JUMP_B:
@@ -295,6 +304,13 @@ func _apply_movement() -> void:
 			else:
 				_vel.y = 0.0
 			_vel.x = 0.0
+		CharacterStateMachine.State.FAST_ATTACK, CharacterStateMachine.State.HEAVY_ATTACK, \
+		CharacterStateMachine.State.SKILL:
+			# 6.3 — a move can carry its own grounded travel (dash kick / storm kick).
+			# 0 when no move is armed or the frame is outside the move's velocity window.
+			# Hitstop early-returns before this, so freezes cost no distance.
+			_vel.x = _current_move.velocity_at(_fsm.frame_in_state) * facing if _current_move != null else 0.0
+			_vel.y = 0.0
 		_:
 			# IDLE, CROUCH, BLOCK, JUMP_START, JUMP_LAND, GETUP — no lateral movement.
 			_vel.x = 0.0
