@@ -233,6 +233,15 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_btn_hover")
 text = "CONTROLS"
 
+[node name="ExitButton" type="Button" parent="SettingsPanel/Panel/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_btn_hover")
+text = "EXIT GAME"
+
 [node name="CloseButton" type="Button" parent="SettingsPanel/Panel/VBox"]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
@@ -331,6 +340,7 @@ text = "BACK"
 [connection signal="value_changed" from="SettingsPanel/Panel/VBox/SFXVolumeRow/SFXVolumeSlider" to="." method="_on_sfx_volume_changed"]
 [connection signal="toggled" from="SettingsPanel/Panel/VBox/FullscreenRow/FullscreenCheck" to="." method="_on_fullscreen_toggled"]
 [connection signal="pressed" from="SettingsPanel/Panel/VBox/ControlsButton" to="." method="_on_controls_pressed"]
+[connection signal="pressed" from="SettingsPanel/Panel/VBox/ExitButton" to="." method="_on_exit_pressed"]
 [connection signal="pressed" from="SettingsPanel/Panel/VBox/CloseButton" to="." method="_on_settings_close_pressed"]
 [connection signal="pressed" from="ControlsPanel/Panel/VBox/ResetButton" to="ControlsPanel" method="_on_reset_pressed"]
 [connection signal="pressed" from="ControlsPanel/Panel/VBox/ControlsBackButton" to="." method="_on_controls_back_pressed"]
