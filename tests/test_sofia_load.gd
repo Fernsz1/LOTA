@@ -49,5 +49,25 @@ func _initialize() -> void:
 	_check(jerb.dash_speed == 9.0 and jerb.dash_frames == 16, "jerb dash defaults 9.0/16")
 	_check(jerb.backdash_speed == 7.0 and jerb.backdash_frames == 20, "jerb backdash defaults 7.0/20")
 
+	# §5.3 health wiring — drive the real controller paths: _apply_character_data()
+	# (stat load) then reset_for_round() (the authoritative per-round health seed).
+	var box_scene: PackedScene = load("res://scenes/character_box.tscn")
+
+	var sofia_ctrl: Node = box_scene.instantiate()
+	sofia_ctrl.character_data = cd
+	sofia_ctrl._apply_character_data()
+	_check(sofia_ctrl.get_max_health() == 900, "Sofia controller get_max_health() == 900")
+	sofia_ctrl.reset_for_round(400.0)
+	_check(sofia_ctrl.health == 900, "Sofia round-start health == 900")
+	sofia_ctrl.free()
+
+	var jerb_ctrl: Node = box_scene.instantiate()
+	jerb_ctrl.character_data = jerb
+	jerb_ctrl._apply_character_data()
+	_check(jerb_ctrl.get_max_health() == 1000, "Jerb controller get_max_health() == 1000 (back-compat)")
+	jerb_ctrl.reset_for_round(880.0)
+	_check(jerb_ctrl.health == 1000, "Jerb round-start health == 1000")
+	jerb_ctrl.free()
+
 	print("\n%d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)

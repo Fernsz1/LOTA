@@ -61,6 +61,7 @@ const GETUP_FRAMES: int = 16          # wake-up; invulnerable throughout (2.5)
 const JUGGLE_DECAY: float = 0.8       # 3.5: hitstun multiplier per subsequent airborne hit
 const PUSHBACK_DECAY: float = 0.85    # per-frame pushback falloff (2.4 — blockstrings self-space)
 var health: int = MAX_HEALTH
+var _max_health: int = MAX_HEALTH     # 6.3: per-character; overridden from CharacterData in _apply_character_data
 var _current_move: MoveData = null    # the move the active attack state is reading
 var _move_has_hit: bool = false       # one hit per attack: cleared when a new attack starts
 var _hitstop: int = 0                 # impact freeze; pauses everything incl. frame_in_state
@@ -85,6 +86,7 @@ func setup(floor_y: float, left_x: float, right_x: float, overlay: Node) -> void
 
 func _ready() -> void:
 	_apply_character_data()
+	health = _max_health   # 6.3: the field initializer ran before stats loaded; seed from the real max
 	_box.color = box_color
 	# Validate frame data on load (conventions: validate with assert/push_error).
 	for m in [move_fast, move_heavy, move_skill, move_ultimate]:
@@ -122,6 +124,8 @@ func _apply_character_data() -> void:
 	_dash_frames = character_data.dash_frames
 	_backdash_speed = character_data.backdash_speed
 	_backdash_frames = character_data.backdash_frames
+	if character_data.max_health > 0:
+		_max_health = character_data.max_health
 
 
 func _physics_process(_delta: float) -> void:
@@ -423,6 +427,11 @@ func _resolve_projectile_spawn() -> void:
 func fsm_state() -> int:
 	return _fsm.state
 
+## 6.3 — this fighter's per-character max health (from CharacterData; defaults to the
+## MAX_HEALTH const). HUD callers divide the current health by this for the bar fraction.
+func get_max_health() -> int:
+	return _max_health
+
 ## Frames elapsed in the current FSM state (0 on the entry frame). Used by training HUD
 ## to compute exact frame advantage at the moment of contact.
 func get_frame_in_state() -> int:
@@ -516,7 +525,7 @@ func force_ko() -> void:
 ## Reset everything for a fresh round (2.6).
 func reset_for_round(spawn_x: float) -> void:
 	position = Vector2(spawn_x, _floor_y)
-	health = MAX_HEALTH
+	health = _max_health
 	_vel = Vector2.ZERO
 	_hitstop = 0
 	_stun_frames = 0
