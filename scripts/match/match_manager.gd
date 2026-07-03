@@ -59,6 +59,10 @@ func _winner_now() -> int:
 	if p1_dead:
 		return 2
 	if _state.time_up():
+		# 6.3: raw-HP tiebreak, not percentage. With unequal maxes (e.g. Sofia 900)
+		# a full-life fighter can lose a double-timeout to a higher-max fighter sitting
+		# above her max. Accepted for v1 (timeouts are rare in a rushdown meta); the 8.2
+		# balance pass reconsiders percentage-based if it ever matters.
 		if _p1.health > _p2.health:
 			return 1
 		if _p2.health > _p1.health:
@@ -106,6 +110,6 @@ func _reset_round() -> void:
 	_hud.announce("ROUND %d" % (_state.p1_rounds + _state.p2_rounds + 1))
 
 func _update_bars() -> void:
-	# 6.4 — per-character max health (Jacob runs 1150); bars are fractions of it.
+	# 6.3/6.4 — per-character max health (Sofia 900, Jacob 1150); bars are fractions of it.
 	_hud.set_health(1, float(_p1.health) / float(_p1.get_max_health()))
 	_hud.set_health(2, float(_p2.health) / float(_p2.get_max_health()))

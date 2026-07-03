@@ -26,6 +26,7 @@ func _initialize() -> void:
 	_test_projectile_spawn_at()
 	_test_validate_with_projectile()
 	_test_invuln_window()
+	_test_velocity_at()
 	print("\n%d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -106,3 +107,40 @@ func _test_invuln_window() -> void:
 	_check(m.is_invuln_at(0), "invuln on frame 0 when invuln_startup=5")
 	_check(m.is_invuln_at(4), "invuln on frame 4 (last invuln frame)")
 	_check(not m.is_invuln_at(5), "no invuln on frame 5 (window is [0,5))")
+
+# 6.3 — self-movement window. Default moves never move; explicit windows are inclusive
+# on both edges; -1 end resolves to the last active frame; inverted windows fail validate.
+func _test_velocity_at() -> void:
+	var m := _jab()                 # move_velocity defaults to 0
+	_check(m.velocity_at(0) == 0.0, "velocity_at 0 during startup for a default move")
+	_check(m.velocity_at(3) == 0.0, "velocity_at 0 during active for a default move")
+	_check(m.velocity_at(4) == 0.0, "velocity_at 0 during recovery for a default move")
+
+	# Dash-kick-shaped move: 10 startup / 6 active / 16 recovery, moves at 11 px/frame.
+	var d: Resource = MD.new()
+	var boxes: Array[Rect2] = [Rect2(18, -64, 44, 26)]
+	d.move_name = "dash_kick"
+	d.startup = 10
+	d.active = 6
+	d.recovery = 16
+	d.hitboxes = boxes
+	d.hitstun = 20
+	d.blockstun = 12
+	d.move_velocity = 11.0          # window fields left at defaults (start 0, end -1)
+	_check(d.velocity_at(0) == 11.0, "moves on frame 0 (window start default 0)")
+	_check(d.velocity_at(15) == 11.0, "moves on frame 15 (last active, -1 end resolves here)")
+	_check(d.velocity_at(16) == 0.0, "rooted on frame 16 (first recovery frame)")
+	_check(d.validate(), "default velocity window validates")
+
+	# Explicit inclusive window [4, 8].
+	d.move_velocity_start = 4
+	d.move_velocity_end = 8
+	_check(d.velocity_at(3) == 0.0, "no move on frame 3 (before window start)")
+	_check(d.velocity_at(4) == 11.0, "moves on frame 4 (window start, inclusive)")
+	_check(d.velocity_at(8) == 11.0, "moves on frame 8 (window end, inclusive)")
+	_check(d.velocity_at(9) == 0.0, "no move on frame 9 (after window end)")
+
+	# Inverted window is a hard validate() error (only checked when velocity != 0).
+	d.move_velocity_start = 8
+	d.move_velocity_end = 4
+	_check(not d.validate(), "inverted velocity window fails validate()")

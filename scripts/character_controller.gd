@@ -35,7 +35,11 @@ var _walk_b_speed: float = WALK_B_SPEED
 var _jump_velocity: float = JUMP_VELOCITY
 var _jump_f_speed: float = JUMP_F_SPEED
 var _gravity: float = GRAVITY
-var _max_health: int = MAX_HEALTH     # 6.4 — per-character (CharacterData.max_health)
+# 6.3 — per-character dash stats (defaults = the consts; overridden by CharacterData).
+var _dash_speed: float = DASH_SPEED
+var _dash_frames: int = DASH_TOTAL
+var _backdash_speed: float = BACKDASH_SPEED
+var _backdash_frames: int = BACKDASH_TOTAL
 
 var _fsm: CharacterStateMachine = CharacterStateMachine.new()
 var _vel: Vector2 = Vector2.ZERO
@@ -57,6 +61,7 @@ const GETUP_FRAMES: int = 16          # wake-up; invulnerable throughout (2.5)
 const JUGGLE_DECAY: float = 0.8       # 3.5: hitstun multiplier per subsequent airborne hit
 const PUSHBACK_DECAY: float = 0.85    # per-frame pushback falloff (2.4 — blockstrings self-space)
 var health: int = MAX_HEALTH
+var _max_health: int = MAX_HEALTH     # 6.3: per-character; overridden from CharacterData in _apply_character_data
 var _current_move: MoveData = null    # the move the active attack state is reading
 var _move_has_hit: bool = false       # one hit per attack: cleared when a new attack starts
 var _hitstop: int = 0                 # impact freeze; pauses everything incl. frame_in_state
@@ -81,6 +86,7 @@ func setup(floor_y: float, left_x: float, right_x: float, overlay: Node) -> void
 
 func _ready() -> void:
 	_apply_character_data()
+	health = _max_health   # 6.3: the field initializer ran before stats loaded; seed from the real max
 	_box.color = box_color
 	# Validate frame data on load (conventions: validate with assert/push_error).
 	for m in [move_fast, move_heavy, move_skill, move_ultimate]:
@@ -114,8 +120,12 @@ func _apply_character_data() -> void:
 	_jump_velocity = character_data.jump_velocity
 	_jump_f_speed = character_data.jump_f_speed
 	_gravity = character_data.gravity
-	_max_health = character_data.max_health
-	health = _max_health
+	_dash_speed = character_data.dash_speed
+	_dash_frames = character_data.dash_frames
+	_backdash_speed = character_data.backdash_speed
+	_backdash_frames = character_data.backdash_frames
+	if character_data.max_health > 0:
+		_max_health = character_data.max_health
 
 
 func _physics_process(_delta: float) -> void:
@@ -156,10 +166,10 @@ func _resolve_busy_exits(buf: InputBuffer) -> void:
 			if _fsm.frame_in_state >= JUMP_LAND_FRAMES:
 				_fsm.request(CharacterStateMachine.State.IDLE)
 		CharacterStateMachine.State.DASH:
-			if _fsm.frame_in_state >= DASH_TOTAL:
+			if _fsm.frame_in_state >= _dash_frames:
 				_fsm.request(CharacterStateMachine.State.IDLE)
 		CharacterStateMachine.State.BACKDASH:
-			if _fsm.frame_in_state >= BACKDASH_TOTAL:
+			if _fsm.frame_in_state >= _backdash_frames:
 				_fsm.request(CharacterStateMachine.State.IDLE)
 		CharacterStateMachine.State.FAST_ATTACK, CharacterStateMachine.State.HEAVY_ATTACK, \
 		CharacterStateMachine.State.SKILL:
@@ -283,10 +293,10 @@ func _apply_movement() -> void:
 			_vel.x = -_walk_b_speed * facing
 			_vel.y = 0.0
 		CharacterStateMachine.State.DASH:
-			_vel.x = DASH_SPEED * facing
+			_vel.x = _dash_speed * facing
 			_vel.y = 0.0
 		CharacterStateMachine.State.BACKDASH:
-			_vel.x = -BACKDASH_SPEED * facing
+			_vel.x = -_backdash_speed * facing
 			_vel.y = 0.0
 		CharacterStateMachine.State.JUMP_AIR, CharacterStateMachine.State.JUMP_F, \
 		CharacterStateMachine.State.JUMP_B:
@@ -311,6 +321,13 @@ func _apply_movement() -> void:
 		CharacterStateMachine.State.GRABBED, CharacterStateMachine.State.THROW_RELEASE:
 			# 6.4 — locked in a throw; the ThrowSequencer positions the victim.
 			_vel = Vector2.ZERO
+		CharacterStateMachine.State.FAST_ATTACK, CharacterStateMachine.State.HEAVY_ATTACK, \
+		CharacterStateMachine.State.SKILL:
+			# 6.3 — a move can carry its own grounded travel (dash kick / storm kick).
+			# 0 when no move is armed or the frame is outside the move's velocity window.
+			# Hitstop early-returns before this, so freezes cost no distance.
+			_vel.x = _current_move.velocity_at(_fsm.frame_in_state) * facing if _current_move != null else 0.0
+			_vel.y = 0.0
 		_:
 			# IDLE, CROUCH, BLOCK, JUMP_START, JUMP_LAND, GETUP — no lateral movement.
 			_vel.x = 0.0
@@ -431,6 +448,11 @@ func _resolve_projectile_spawn() -> void:
 
 func fsm_state() -> int:
 	return _fsm.state
+
+## Per-character max health (6.3/6.4 — e.g. Sofia 900, Jacob 1150; defaults to
+## MAX_HEALTH). HUD callers divide the current health by this for the bar fraction.
+func get_max_health() -> int:
+	return _max_health
 
 ## Frames elapsed in the current FSM state (0 on the entry frame). Used by training HUD
 ## to compute exact frame advantage at the moment of contact.
@@ -580,10 +602,6 @@ func apply_throw(move: MoveData) -> void:
 ## Force the KO state on the round loser (2.6).
 func force_ko() -> void:
 	_fsm.on_ko()
-
-## Per-character health ceiling (6.4 — grapplers run tanky). HUD bars divide by this.
-func get_max_health() -> int:
-	return _max_health
 
 ## Reset everything for a fresh round (2.6).
 func reset_for_round(spawn_x: float) -> void:
