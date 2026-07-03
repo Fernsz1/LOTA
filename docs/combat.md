@@ -204,3 +204,49 @@ spaces itself out. Stun lasts `move.hitstun` / `move.blockstun` frames, then →
 > juggle-limit territory, deferred to the cancel/juggle system (3.5) and the balance
 > pass (8.2). It does not block "a round can be won and lost". When addressed, the fix
 > is a per-combo juggle/OTG limit or brief knockdown invuln — not a structural change.
+
+## 5. Command grabs & throws (6.4)
+
+Grabs reuse the strike pipeline's shapes but resolve on a **separate channel** so
+blocking never protects and strike code never sees a grab box.
+
+### Data (`MoveData`, same resource)
+
+A move with `is_grab = true` (Jacob's SKILL/ULTIMATE) reinterprets its fields:
+`hitboxes` become the **grab box** (connect window = active frames), `recovery` is
+the whiff punish, `hitstun/blockstun` are unused. New fields: `throw_release_frames`
+(length of the throw animation; damage lands at the end), `tech_window` (frames from
+`GRABBED` entry where the victim's FAST press escapes; `0` = untechable) and
+`throw_launch_y` (victim's vertical pop into `KNOCKDOWN` at release).
+
+### States (FSM)
+
+`GRAB_ATTEMPT` (busy; entered from actionable; exits to `IDLE` on whiff or
+`THROW_RELEASE` on connect) / `GRABBED` (reaction, **forced** on the victim; exits
+to `IDLE` on tech/abort or is force-launched by the slam) / `THROW_RELEASE` (busy;
+exits to `IDLE`). Grabs are grounded-only: airborne states can't request
+`GRAB_ATTEMPT`.
+
+### Resolution (`GrabRules` decides, `ThrowSequencer` applies)
+
+Mirrors the HitResolver split. `GrabRules.is_grabbable(state)`: grounded and NOT
+prejump (`JUMP_START` — jumping escapes grabs), NOT in a reaction (no throw loops in
+combos), NOT `GETUP`/`KO`/`THROW_RELEASE`. Blocking and attack recovery ARE
+grabbable. `is_invulnerable()` is respected like strikes — and includes `GRABBED`
+itself, so a held victim can't be struck by a stray projectile.
+
+`ThrowSequencer` (one per scene in `main.gd`; one per arena in training) owns a
+connected throw: hitstop both on connect, snap the victim to a hold offset (48px —
+wider than the pushbox, so separation stays quiet; the scenes still pause pushbox
+resolution during a throw to dodge the deep-overlap bounce), count
+`throw_release_frames`, then damage + pop + forced `KNOCKDOWN` and release. The
+**tech** lookback spans `tech_window + hitstop` frames because input buffers keep
+filling during the connect freeze while the sequencer doesn't step. If either
+fighter leaves its throw state early (projectile interrupt, round reset, timer KO)
+the sequence aborts and frees whoever is still held.
+
+Ordering per frame: strikes → throws → projectiles, so a same-frame trade favors
+the strike (the grabber gets hit out of the attempt).
+
+Verified end-to-end by `scenes/dev/grab_demo.tscn` (headless, exit 0 = pass) plus
+`tests/test_grab_rules.gd`, `tests/test_fsm.gd`, `tests/test_jacob_load.gd`.

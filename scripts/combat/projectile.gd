@@ -5,7 +5,11 @@ extends Node2D
 ## its hitbox vs the opponent, and frees it on hit/block/range. Movement is in
 ## step() (NOT _physics_process) so main.gd controls ordering + hitstop freeze.
 
-var data: ProjectileData = null
+# Preloaded (not the bare class_name) so this compiles under headless --script
+# tests, where the project's global class registry isn't loaded. PD is ProjectileData.
+const PD := preload("res://scripts/combat/projectile_data.gd")
+
+var data: PD = null
 var facing: int = 1
 var owner_index: int = 1
 var _travelled: float = 0.0
@@ -13,7 +17,7 @@ var _expired: bool = false
 
 @onready var _box: ColorRect = $Box
 
-func setup(p_data: ProjectileData, origin: Vector2, p_facing: int, p_owner_index: int) -> void:
+func setup(p_data: PD, origin: Vector2, p_facing: int, p_owner_index: int) -> void:
 	data = p_data
 	facing = p_facing
 	owner_index = p_owner_index

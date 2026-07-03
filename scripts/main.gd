@@ -14,6 +14,7 @@ const RIGHT_WALL_X: float = 1230.0
 
 const PROJECTILE_SCENE := preload("res://scenes/projectile.tscn")
 var _projectiles: Array[Projectile] = []
+var _throw: ThrowSequencer = null   # 6.4 — the one live throw (only two fighters)
 
 
 func _ready() -> void:
@@ -37,8 +38,13 @@ func _ready() -> void:
 func _physics_process(_delta: float) -> void:
 	_update_facing()      # fresh facing first: combat reads back-direction + mirrors boxes
 	_resolve_combat()
+	_resolve_throws()     # 6.4 — after strikes (a same-frame strike beats a grab)
 	_resolve_projectiles()
-	_resolve_pushboxes()
+	# Pushbox separation pauses during a throw: the hold offset keeps the pair
+	# legal, but the deep-overlap bounce would otherwise shove the victim out
+	# of the attacker's hands on a point-blank connect.
+	if _throw == null:
+		_resolve_pushboxes()
 
 
 # Detect and resolve hits this frame (2.4). Runs after both controllers have moved
@@ -71,6 +77,21 @@ func _try_hit(attacker: CharacterController, defender: CharacterController) -> v
 		defender.apply_block(move, push_dir)
 	else:
 		defender.apply_hit(move, push_dir)
+
+
+# 6.4 — grab detection + throw progression. One throw at a time (two fighters:
+# the attacker is busy and the victim is held, so a second can't start). Frozen
+# frames (hitstop) pause the sequence exactly like strike resolution.
+func _resolve_throws() -> void:
+	if _p1.is_frozen() or _p2.is_frozen():
+		return
+	if _throw != null:
+		if _throw.step():
+			_throw = null
+		return
+	_throw = ThrowSequencer.try_start(_p1, _p2)
+	if _throw == null:
+		_throw = ThrowSequencer.try_start(_p2, _p1)
 
 
 # 3.2 — spawn one projectile, gated to ONE live per owner (fire-and-forget). If the

@@ -15,7 +15,7 @@ It enforces **structural** legality only (e.g. you must land before you can walk
 It does **not** encode timing or cancels — move durations and cancel windows are
 frame data (Phase 2) and the cancel system (3.5), applied by the controller.
 
-## States (20)
+## States (23)
 
 | State | Category | Meaning |
 |---|---|---|
@@ -36,6 +36,9 @@ frame data (Phase 2) and the cancel system (3.5), applied by the controller.
 | `KNOCKDOWN` | reaction | knocked to the floor |
 | `GETUP` | busy | waking up (often with invuln, added later) |
 | `KO` | terminal | rounds-ending defeat |
+| `GRAB_ATTEMPT` | busy | command-grab startup/connect/whiff window (6.4) |
+| `GRABBED` | reaction | held by a connected throw, forced on the victim (6.4) |
+| `THROW_RELEASE` | busy | executing the throw on a held victim (6.4) |
 
 Jump phases: `JUMP_START` (squat) -> exactly one airborne state
 `JUMP_AIR`/`JUMP_F`/`JUMP_B` (by held direction) -> `JUMP_LAND` -> `IDLE`. In 1.3,
@@ -50,13 +53,15 @@ exits:
 | From | May `request` -> |
 |---|---|
 | `KO` | nothing (only `reset()`) |
-| actionable (IDLE/WALK_F/WALK_B/CROUCH/BLOCK) | IDLE, WALK_F, WALK_B, CROUCH, BLOCK, JUMP_START, DASH, BACKDASH, FAST_ATTACK, HEAVY_ATTACK, SKILL |
+| actionable (IDLE/WALK_F/WALK_B/CROUCH/BLOCK) | IDLE, WALK_F, WALK_B, CROUCH, BLOCK, JUMP_START, DASH, BACKDASH, FAST_ATTACK, HEAVY_ATTACK, SKILL, GRAB_ATTEMPT |
 | airborne (JUMP_AIR/F/B) | JUMP_LAND |
 | JUMP_START | JUMP_AIR, JUMP_F, JUMP_B |
 | JUMP_LAND / DASH / BACKDASH / GETUP | IDLE |
 | FAST_ATTACK / HEAVY_ATTACK / SKILL | IDLE |
 | HITSTUN / BLOCKSTUN | IDLE |
 | KNOCKDOWN | GETUP |
+| GRAB_ATTEMPT | IDLE (whiff), THROW_RELEASE (connect) |
+| THROW_RELEASE / GRABBED | IDLE (release / tech / abort) |
 
 - **Grounded <-> air** crossing is only via `JUMP_START` (up) and `JUMP_LAND` (down).
 - **Busy states allow only their resolved exit** — a new action is rejected;
@@ -65,6 +70,7 @@ exits:
 - **Reactions and KO are entered by `force()`**, legal from any non-KO state:
   `on_hit()`->HITSTUN, `on_blocked()`->BLOCKSTUN, `on_launched()`->KNOCKDOWN,
   `on_ko()`->KO. Re-forcing a reaction re-applies it (a fresh hit resets stun).
+  GRABBED (6.4) is also a force target — the victim's entry into a connected throw.
 - Re-`request`ing the current state is a no-op that returns `true` (so a polling
   controller can request a held direction every frame without resetting timers).
 
@@ -135,12 +141,14 @@ entered mid-frame still reads `0` for its first full frame and begins counting
 `1, 2, …` afterward. **Call `tick()` exactly once per physics frame, at the end of
 the update.** Read `frame_in_state` (e.g. "prejump is 4 frames") *before* ticking.
 
-## Extending it (e.g. Jacob the grappler, 6.4)
+## Extending it
 
-Add the new members to `State`, slot each into the right category predicate
-(`is_busy`, `is_in_reaction`, …), and add its row to `can_transition`. For grabs:
-`GRAB_ATTEMPT` (busy, from actionable), `GRABBED` (reaction-like, forced on the
-victim), `THROW_RELEASE` (busy -> IDLE). No structural change to the machine.
+Add the new members to `State` (**append** — keep existing ordinals stable), slot
+each into the right category predicate (`is_busy`, `is_in_reaction`, …), and add
+its row to `can_transition`. The grab states (6.4) landed exactly this way:
+`GRAB_ATTEMPT` (busy, from actionable), `GRABBED` (reaction, forced on the victim),
+`THROW_RELEASE` (busy -> IDLE) — no structural change to the machine. See
+`docs/combat.md` §5 for how the combat layer drives them.
 
 ## Verifying
 

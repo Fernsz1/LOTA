@@ -9,6 +9,11 @@ extends Resource
 ## is_active()/hitboxes_at(), so multi-hit can arrive later as an optional
 ## active_windows array WITHOUT changing single-hit moves or callers (see docs/combat.md).
 
+# Preloaded (not the bare class_name) so this compiles under headless --script
+# tests, where the project's global class registry isn't loaded (same pattern
+# as hit_resolver.gd). PD is ProjectileData.
+const PD := preload("res://scripts/combat/projectile_data.gd")
+
 @export var move_name: String = ""
 @export var startup: int = 0
 @export var active: int = 1
@@ -22,10 +27,19 @@ extends Resource
 @export var pushback_block: float = 0.0      # px/frame; block ≥ hit
 @export var causes_knockdown: bool = false   # 2.5: on hit, force KNOCKDOWN instead of HITSTUN
 @export var invuln_startup: int = 0   # 3.4: frames of invuln from move start (e.g. DP anti-air); 0 = none
-@export var projectile: ProjectileData = null   # 3.2: if set, this move spawns a projectile
+@export var projectile: PD = null   # 3.2: if set, this move spawns a projectile (ProjectileData)
 @export var projectile_spawn_frame: int = -1     # frame_in_state to spawn on; -1 = first active (startup)
 @export var cancel_window_start: int = -1  # 3.5: frame_in_state when cancel input is accepted; -1 = no cancel
 @export var cancel_window_end: int = -1    # 3.5: frame_in_state when cancel closes; -1 = last active frame (startup+active-1)
+
+# 6.4 — command grabs. When is_grab, the controller enters GRAB_ATTEMPT instead
+# of a strike state and `hitboxes` become the GRAB box (checked vs hurtboxes,
+# unblockable, gated by GrabRules). startup/active/recovery keep their meaning
+# (active = connect window, recovery = whiff punish). hitstun/blockstun unused.
+@export var is_grab: bool = false
+@export var throw_release_frames: int = 30   # length of THROW_RELEASE; damage lands at the end
+@export var tech_window: int = 8             # frames from GRABBED entry where victim FAST techs; 0 = untechable
+@export var throw_launch_y: float = -6.0     # victim vertical pop at release (falls into KNOCKDOWN)
 
 ## Total length; spans are disjoint so it's a clean sum (feel-reference §3).
 func total() -> int:
@@ -83,6 +97,17 @@ func validate() -> bool:
 	if damage < 0 or hitstun < 0 or blockstun < 0 or hitstop < 0:
 		push_error("MoveData '%s': negative damage/stun/hitstop" % move_name)
 		ok = false
-	if hitstun <= blockstun:
+	if is_grab:
+		if throw_release_frames < 1:
+			push_error("MoveData '%s': grab needs throw_release_frames >= 1" % move_name)
+			ok = false
+		if tech_window < 0:
+			push_error("MoveData '%s': negative tech_window" % move_name)
+			ok = false
+		if projectile != null:
+			push_error("MoveData '%s': a grab cannot also spawn a projectile" % move_name)
+			ok = false
+	elif hitstun <= blockstun:
+		# Strike-only smell — grabs don't use hitstun/blockstun at all.
 		push_warning("MoveData '%s': hitstun <= blockstun inverts block incentive (feel-reference §7)" % move_name)
 	return ok

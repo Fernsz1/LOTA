@@ -3,11 +3,12 @@ extends Node2D
 ## Draws all players' boxes colour-coded and projectile hitboxes.
 ## Toggle with the `debug_boxes` action (F3). Starts in whatever state
 ## `visible` is set to in the scene (training = off, match = on).
-## Green = hurtbox, red = hitbox, yellow = pushbox (outline).
+## Green = hurtbox, red = hitbox, yellow = pushbox (outline), purple = grab box.
 
 const COL_HURT: Color = Color(0.2, 0.8, 0.3, 0.45)
 const COL_HIT: Color = Color(0.9, 0.2, 0.2, 0.5)
 const COL_PUSH: Color = Color(0.9, 0.8, 0.2, 0.9)
+const COL_GRAB: Color = Color(0.7, 0.25, 0.9, 0.5)   # 6.4 — command-grab connect window
 
 @export var players: Array[NodePath] = []
 @export var main_path: NodePath
@@ -40,6 +41,8 @@ func _draw() -> void:
 			draw_rect(r, COL_HURT, true)
 		for r in c.get_hitboxes():
 			draw_rect(r, COL_HIT, true)
+		for r in c.get_grab_boxes():
+			draw_rect(r, COL_GRAB, true)
 	if _main != null:
 		for r in _main.get_projectile_hitboxes():
 			draw_rect(r, COL_HIT, true)

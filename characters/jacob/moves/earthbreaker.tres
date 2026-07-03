@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="MoveData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
+
+; Earthbreaker — super grab. Startup-invulnerable (walks through pokes and
+; fireballs), untechable, round-ending damage. Long whiff recovery is the price.
+[resource]
+script = ExtResource("1_move")
+move_name = "earthbreaker"
+startup = 10
+active = 4
+recovery = 34
+hitboxes = Array[Rect2]([Rect2(5, -72, 55, 62)])
+damage = 300
+hitstop = 16
+invuln_startup = 6
+is_grab = true
+throw_release_frames = 44
+tech_window = 0
+throw_launch_y = -8.5
