@@ -15,7 +15,9 @@ func _check(cond: bool, msg: String) -> void:
 		printerr("FAIL: ", msg)
 
 func _initialize() -> void:
-	var cd: CharacterData = load("res://characters/rainne/rainne_data.tres")
+	# Untyped: global class_name symbols aren't registered in isolated --script
+	# mode; the .tres still resolves its script by path.
+	var cd: Resource = load("res://characters/rainne/rainne_data.tres")
 	_check(cd != null, "rainne_data.tres loads")
 	_check(cd.character_name == "Rainne", "character_name is Rainne")
 	_check(cd.walk_speed < 5.0, "walk_speed slower than Jerb (zoner)")

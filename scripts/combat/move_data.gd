@@ -9,6 +9,11 @@ extends Resource
 ## is_active()/hitboxes_at(), so multi-hit can arrive later as an optional
 ## active_windows array WITHOUT changing single-hit moves or callers (see docs/combat.md).
 
+# Preloaded (not the bare class_name) so this compiles under headless --script
+# tests, where the project's global class registry isn't loaded (same pattern
+# as hit_resolver.gd). PD is ProjectileData.
+const PD := preload("res://scripts/combat/projectile_data.gd")
+
 @export var move_name: String = ""
 @export var startup: int = 0
 @export var active: int = 1
@@ -22,7 +27,7 @@ extends Resource
 @export var pushback_block: float = 0.0      # px/frame; block ≥ hit
 @export var causes_knockdown: bool = false   # 2.5: on hit, force KNOCKDOWN instead of HITSTUN
 @export var invuln_startup: int = 0   # 3.4: frames of invuln from move start (e.g. DP anti-air); 0 = none
-@export var projectile: ProjectileData = null   # 3.2: if set, this move spawns a projectile
+@export var projectile: PD = null   # 3.2: if set, this move spawns a projectile (ProjectileData)
 @export var projectile_spawn_frame: int = -1     # frame_in_state to spawn on; -1 = first active (startup)
 @export var cancel_window_start: int = -1  # 3.5: frame_in_state when cancel input is accepted; -1 = no cancel
 @export var cancel_window_end: int = -1    # 3.5: frame_in_state when cancel closes; -1 = last active frame (startup+active-1)
