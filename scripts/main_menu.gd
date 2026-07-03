@@ -24,7 +24,7 @@ func _ready() -> void:
 
 
 func _on_play_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/character_select.tscn")
+	get_tree().change_scene_to_file("res://scenes/player_names.tscn")
 
 
 func _on_training_pressed() -> void:

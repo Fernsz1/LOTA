@@ -75,7 +75,9 @@ func _end_round(winner: int) -> void:
 	_hud.set_rounds(1, _state.p1_rounds)
 	_hud.set_rounds(2, _state.p2_rounds)
 	if _state.phase == MatchState.Phase.MATCH_END:
-		_hud.announce("PLAYER %d WINS" % _state.match_winner())
+		var winner_name: String = MatchSelection.p1_name if _state.match_winner() == 1 else MatchSelection.p2_name
+		Leaderboard.record_win(winner_name)
+		_hud.announce("%s WINS" % winner_name)
 		_delay = MATCH_END_HOLD
 	else:
 		_hud.announce("DRAW" if winner == 0 else "K.O.")
