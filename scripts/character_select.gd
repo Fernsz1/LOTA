@@ -1,15 +1,15 @@
 extends Control
 ## Tekken-style select screen. Both players share one grid; each moves their own
 ## cursor with p{n}_left/right, locks in with p{n}_fast, and unlocks with p{n}_heavy.
-## Only Jerb/Rainne are playable — the other 3 slots are locked stubs. Once both
+## Jerb/Rainne/Jacob are playable — the other 2 slots are locked stubs. Once both
 ## players are locked, their picks go to MatchSelection and we move on to loading.
 
 const SLOTS: Array[Dictionary] = [
 	{"id": "jerb", "name": "JERB", "locked": false, "data_path": "res://characters/jerb/jerb_data.tres", "color": Color(0.2, 0.5, 0.9, 1)},
 	{"id": "rainne", "name": "RAINNE", "locked": false, "data_path": "res://characters/rainne/rainne_data.tres", "color": Color(0.9, 0.55, 0.15, 1)},
+	{"id": "jacob", "name": "JACOB", "locked": false, "data_path": "res://characters/jacob/jacob_data.tres", "color": Color(0.62, 0.16, 0.18, 1)},
 	{"id": "locked_1", "name": "???", "locked": true, "data_path": "", "color": Color(0.22, 0.22, 0.25, 1)},
 	{"id": "locked_2", "name": "???", "locked": true, "data_path": "", "color": Color(0.22, 0.22, 0.25, 1)},
-	{"id": "locked_3", "name": "???", "locked": true, "data_path": "", "color": Color(0.22, 0.22, 0.25, 1)},
 ]
 
 const SLOT_SIZE := Vector2(150, 170)

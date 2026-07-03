@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="MoveData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
+
+; Hammer Swing — committal haymaker; knocks down on hit.
+[resource]
+script = ExtResource("1_move")
+move_name = "heavy"
+startup = 14
+active = 4
+recovery = 22
+hitboxes = Array[Rect2]([Rect2(-5, -75, 70, 40)])
+damage = 150
+hitstun = 24
+blockstun = 17
+hitstop = 14
+pushback_hit = 6.0
+pushback_block = 4.0
+causes_knockdown = true

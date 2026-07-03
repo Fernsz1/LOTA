@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/dev/grab_demo.gd" id="1_demo"]
+[ext_resource type="PackedScene" uid="uid://bmkrf5josp6lk" path="res://scenes/character_box.tscn" id="2_charbox"]
+[ext_resource type="Resource" path="res://characters/jacob/jacob_data.tres" id="3_jacobdata"]
+[ext_resource type="Resource" path="res://characters/jerb/jerb_data.tres" id="4_jerbdata"]
+
+[node name="GrabDemo" type="Node2D"]
+script = ExtResource("1_demo")
+
+[node name="P1" parent="." instance=ExtResource("2_charbox")]
+position = Vector2(500, 560)
+box_color = Color(0.62, 0.16, 0.18, 1)
+character_data = ExtResource("3_jacobdata")
+
+[node name="P2" parent="." instance=ExtResource("2_charbox")]
+position = Vector2(560, 560)
+player_index = 2
+facing = -1
+box_color = Color(0.2, 0.5, 0.9, 1)
+character_data = ExtResource("4_jerbdata")

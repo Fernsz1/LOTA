@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/character/character_data.gd" id="1_cd"]
+[ext_resource type="Resource" path="res://characters/jacob/moves/jab.tres" id="2_fast"]
+[ext_resource type="Resource" path="res://characters/jacob/moves/heavy.tres" id="3_heavy"]
+[ext_resource type="Resource" path="res://characters/jacob/moves/takedown.tres" id="4_skill"]
+[ext_resource type="Resource" path="res://characters/jacob/moves/earthbreaker.tres" id="5_ult"]
+
+[resource]
+script = ExtResource("1_cd")
+character_name = "Jacob"
+max_health = 1150
+walk_speed = 3.4
+walk_b_speed = 3.0
+jump_velocity = -13.5
+jump_f_speed = 2.6
+gravity = 0.72
+move_fast = ExtResource("2_fast")
+move_heavy = ExtResource("3_heavy")
+move_skill = ExtResource("4_skill")
+move_ultimate = ExtResource("5_ult")

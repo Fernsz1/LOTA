@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="MoveData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
+
+; Buno Takedown — the signature command grab. Unblockable, short range,
+; techable (FAST within 10f of being grabbed), very whiff-punishable.
+[resource]
+script = ExtResource("1_move")
+move_name = "takedown"
+startup = 7
+active = 4
+recovery = 26
+hitboxes = Array[Rect2]([Rect2(5, -70, 45, 60)])
+damage = 180
+hitstop = 10
+is_grab = true
+throw_release_frames = 30
+tech_window = 10
+throw_launch_y = -6.0
