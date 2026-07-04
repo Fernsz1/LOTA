@@ -11,6 +11,8 @@ const RIGHT_WALL_X: float = 1230.0
 @onready var _overlay: Node = $DebugOverlay
 @onready var _p1: CharacterController = $P1
 @onready var _p2: CharacterController = $P2
+@onready var _background: ColorRect = $Background
+@onready var _floor: ColorRect = $Floor
 
 const PROJECTILE_SCENE := preload("res://scenes/projectile.tscn")
 var _projectiles: Array[Projectile] = []
@@ -29,6 +31,10 @@ func _ready() -> void:
 		_p1.set_character(MatchSelection.p1_data, MatchSelection.p1_color)
 	if MatchSelection.p2_data != null:
 		_p2.set_character(MatchSelection.p2_data, MatchSelection.p2_color)
+	# 7.2 — stage-select pick (if any) overrides the .tscn-authored background/floor.
+	if MatchSelection.stage_data != null:
+		_background.color = MatchSelection.stage_data.background_color
+		_floor.color = MatchSelection.stage_data.floor_color
 	_p1.setup(FLOOR_Y, LEFT_WALL_X, RIGHT_WALL_X, _overlay)
 	_p2.setup(FLOOR_Y, LEFT_WALL_X, RIGHT_WALL_X, _overlay)
 	_p1.projectile_requested.connect(_on_projectile_requested.bind(1))
