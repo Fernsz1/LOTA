@@ -1,9 +1,0 @@
-[gd_resource type="Resource" script_class="StageData" load_steps=2 format=3]
-
-[ext_resource type="Script" path="res://scripts/stage/stage_data.gd" id="1_sd"]
-
-[resource]
-script = ExtResource("1_sd")
-stage_name = "Dojo"
-background_color = Color(0.12, 0.07, 0.05, 1)
-floor_color = Color(0.35, 0.22, 0.12, 1)
