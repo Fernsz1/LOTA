@@ -23,6 +23,21 @@ func _ready() -> void:
 	_fullscreen_check.button_pressed = get_window().mode == Window.MODE_FULLSCREEN
 
 
+## Esc opens Settings from the bare menu, and otherwise backs out one layer
+## (Controls → Settings → closed). While the controls screen is capturing a
+## rebind it consumes Esc itself first, so this never fires mid-capture.
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not event is InputEventKey or not event.pressed or event.echo or event.keycode != KEY_ESCAPE:
+		return
+	get_viewport().set_input_as_handled()
+	if _controls_panel.visible:
+		_on_controls_back_pressed()
+	elif _settings_panel.visible:
+		_on_settings_close_pressed()
+	else:
+		_on_settings_pressed()
+
+
 func _on_play_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/player_names.tscn")
 

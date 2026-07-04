@@ -114,11 +114,24 @@ func get_key_display(action: String) -> String:
 	return "—"
 
 
+## Short Xbox-style names instead of InputEventJoypadButton.as_text(), which
+## yields the unwieldy "Joypad Button 0 (Bottom Action, Sony Cross, Xbox A, …)".
+const _BUTTON_NAMES: Dictionary = {
+	JOY_BUTTON_A: "A", JOY_BUTTON_B: "B", JOY_BUTTON_X: "X", JOY_BUTTON_Y: "Y",
+	JOY_BUTTON_BACK: "Back", JOY_BUTTON_GUIDE: "Guide", JOY_BUTTON_START: "Start",
+	JOY_BUTTON_LEFT_STICK: "L3", JOY_BUTTON_RIGHT_STICK: "R3",
+	JOY_BUTTON_LEFT_SHOULDER: "LB", JOY_BUTTON_RIGHT_SHOULDER: "RB",
+	JOY_BUTTON_DPAD_UP: "D-pad Up", JOY_BUTTON_DPAD_DOWN: "D-pad Down",
+	JOY_BUTTON_DPAD_LEFT: "D-pad Left", JOY_BUTTON_DPAD_RIGHT: "D-pad Right",
+	JOY_BUTTON_TOUCHPAD: "Touchpad",
+}
+
+
 ## Human-readable label for the action's current gamepad binding ("—" if none).
 func get_gamepad_display(action: String) -> String:
 	for ev in InputMap.action_get_events(action):
 		if ev is InputEventJoypadButton:
-			return ev.as_text()
+			return _BUTTON_NAMES.get(ev.button_index, "Button %d" % ev.button_index)
 	return "—"
 
 
