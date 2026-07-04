@@ -60,8 +60,10 @@ const PD := preload("res://scripts/combat/projectile_data.gd")
 # Which choreography plays (read only when is_cinematic; specs in
 # .local/gamePlan.md): "rush" — The Four Corners, run-in + four punches (Jerb);
 # "sky_rally" — Sky Rally, an aerial takraw juggle ending in a bicycle-kick
-# spike that crashes the ball into the opponent (Rainne).
-@export_enum("rush", "sky_rally") var cinematic_style: String = "rush"
+# spike that crashes the ball into the opponent (Rainne); "slam" —
+# Earthbreaker, an invulnerable lunge into an overhead lift and a
+# ground-shaking slam (Jacob — his ultimate is a grab, which is allowed here).
+@export_enum("rush", "sky_rally", "slam") var cinematic_style: String = "rush"
 
 ## Total length; spans are disjoint so it's a clean sum (feel-reference §3).
 func total() -> int:
@@ -134,8 +136,8 @@ func validate() -> bool:
 	if is_counter and is_grab:
 		push_error("MoveData '%s': a move cannot be both a counter and a grab" % move_name)
 		ok = false
-	if is_cinematic and (is_grab or is_counter):
-		push_error("MoveData '%s': a cinematic ultimate must be a plain strike" % move_name)
+	if is_cinematic and is_counter:
+		push_error("MoveData '%s': a cinematic ultimate cannot be a counter stance" % move_name)
 		ok = false
 	if is_counter and projectile != null:
 		push_error("MoveData '%s': a counter cannot spawn a projectile" % move_name)

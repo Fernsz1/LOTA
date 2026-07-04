@@ -1,9 +1,10 @@
 ﻿extends Node
-## 7.3 — Headless end-to-end run of BOTH cinematic ultimates. Boots the real
-## match scene (P1 Jerb "rush", P2 Rainne "sky_rally"), presses each player's
-## ULTIMATE via the InputManager override hook, and asserts each sequence locks
-## both fighters, hides the HUD, deals the authored total damage, knocks the
-## victim down, and restores the camera/HUD.
+## 7.3 — Headless end-to-end run of ALL cinematic ultimates. Boots the real
+## match scene (P1 Jerb "rush", P2 Rainne "sky_rally", then P1 is swapped to
+## Jacob for "slam"), presses each player's ULTIMATE via the InputManager
+## override hook, and asserts each sequence locks both fighters, hides the HUD,
+## deals the authored total damage, knocks the victim down, and restores the
+## camera/HUD.
 ## Run: godot --headless --path . res://tests/e2e_ultimate_cinematic.tscn
 ## (Unlike the tests/*.gd SceneTree scripts, this needs the autoloads, so it
 ## runs as a scene inside the normal game boot.)
@@ -93,8 +94,40 @@ func _physics_process(_delta: float) -> void:
 					or p1_state == CharacterStateMachine.State.GETUP,
 					"sky_rally: victim went through knockdown (state now %s)"
 					% CharacterStateMachine.State.keys()[p1_state])
+
+		# --- P1 swapped to Jacob ("slam"): a grab ultimate must also trigger ---
+		1500:
+			var jd: CharacterData = load("res://characters/jacob/jacob_data.tres")
+			_p1.set_character(jd, jd.color)
+			_p2_start_health = _p2.health
+		1510:
+			InputManager.set_override(1, InputBuffer.ULTIMATE)
+		1514:
+			InputManager.set_override(1, 0)
+		1580:
+			_check(_p1.is_frozen() and _p2.is_frozen(), "slam: both fighters locked")
+			_check(not _hud.visible, "slam: HUD hidden")
+		2200:
+			var ult3: MoveData = _p1.move_ultimate
+			_check(ult3.cinematic_style == "slam" and ult3.is_grab,
+					"P1 ultimate is Jacob's slam (a grab)")
+			_check(_p2.health == _p2_start_health - ult3.damage,
+					"slam: victim took exactly the authored total (%d): %d -> %d"
+					% [ult3.damage, _p2_start_health, _p2.health])
+			_check(not _p1.is_frozen() and not _p2.is_frozen(), "slam: both fighters released")
+			_check(_hud.visible, "slam: HUD restored")
+			_check(_camera.position.is_equal_approx(Vector2(640, 360))
+					and _camera.zoom.is_equal_approx(Vector2.ONE), "slam: camera home again")
+			var vic_state: int = _p2.fsm_state()
+			_check(vic_state == CharacterStateMachine.State.IDLE
+					or vic_state == CharacterStateMachine.State.KNOCKDOWN
+					or vic_state == CharacterStateMachine.State.GETUP,
+					"slam: victim went through knockdown (state now %s)"
+					% CharacterStateMachine.State.keys()[vic_state])
+			var p2_box: ColorRect = _p2.get_node("Box")
+			_check(is_zero_approx(p2_box.rotation), "slam: victim box rotation restored")
 			print("\n%d checks, %d failures" % [_checks, _failures])
 			get_tree().quit(1 if _failures > 0 else 0)
-		2000:
+		2600:
 			printerr("FAIL: e2e timed out")
 			get_tree().quit(2)

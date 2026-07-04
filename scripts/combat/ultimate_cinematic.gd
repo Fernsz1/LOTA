@@ -16,6 +16,13 @@ extends RefCounted
 ## bicycle-kick Final Spike sends the ball crashing down into the opponent.
 ## Only the spike touches the victim; the rally is her showcase.
 ##
+## "slam" (Jacob: "Earthbreaker", cinematic super grab): a heavy stomping lunge
+## to the opponent, the clinch, then he hoists them inverted overhead, hangs a
+## slow-mo beat at the apex, and piledrives them into the ground with a
+## shockwave. The victim barely moves — the world stops instead (grappler
+## weight, deliberately no Sett-style carry: no free corner position on top of
+## the round-ending damage).
+##
 ## Shared frame: on the first frame of a move flagged is_cinematic, both
 ## fighters are locked (is_frozen() → hits, throws, projectiles and the round
 ## timer all pause), the HUD is hidden, letterbox bars slide in and the camera
@@ -76,14 +83,29 @@ const RALLY_ZOOM: float = 1.7        # wide enough to frame her and the ball
 const BALL_COLOR := Color(0.95, 0.8, 0.35, 0.95)   # rattan-ball glow
 const BLAST_COLOR := Color(1.0, 0.85, 0.45, 0.95)
 
+# --- "slam" choreography ---
+const LUNGE_SPEED: float = 9.0       # heavy, deliberate — slower than Jerb's run
+const LUNGE_CAP: int = 130           # safety: never lunge longer than this
+const CLINCH_GAP: float = 48.0       # matches ThrowSequencer's hold offset
+const CLINCH_FRAMES: int = 18
+const LIFT_FRAMES: int = 30          # slow hoist — the slow-mo beat going up
+const APEX_FRAMES: int = 16          # hang time, victim inverted overhead
+const SLAM_FRAMES: int = 5           # the drive down is instant by contrast
+const IMPACT_FRAMES: int = 22        # shockwave hold before the knockdown
+const LIFT_HEIGHT: float = 150.0     # victim held this far overhead
+const SLAM_BOUNCE: float = 3.0       # they barely slide — piledriven in place
+const SHOCKWAVE_W: float = 340.0     # ground shockwave full width
+const SHOCKWAVE_COLOR := Color(0.85, 0.75, 0.55, 0.9)   # dust off the floor
+
 # Damage split across the pre-finisher hits (fractions of move.damage); the
 # finisher takes the remainder so the total always equals the authored damage.
-# Sky Rally is a single blow: only the spike touches the opponent.
+# Sky Rally and Earthbreaker are single blows: everything on the finisher.
 const RUSH_FRACTIONS: Array[float] = [0.15, 0.2, 0.25]
-const SKY_RALLY_FRACTIONS: Array[float] = []
+const FINISHER_ONLY: Array[float] = []
 
 enum Phase { ZOOM_IN, RUN, WINDUP, THRUST, HOLD, RECOVER, LAUNCH, ZOOM_OUT,
-	RALLY_WINDUP, RALLY_STRIKE, SPIKE_FLIGHT, BLAST }
+	RALLY_WINDUP, RALLY_STRIKE, SPIKE_FLIGHT, BLAST,
+	LUNGE, CLINCH, LIFT, APEX, SLAM, IMPACT }
 
 var attacker: CharacterController
 var victim: CharacterController
@@ -113,12 +135,13 @@ var _zoom_out_from_zoom: float = 1.0
 var _launch_vel: float = 0.0
 var _done: bool = false
 
-# sky_rally world-space fx + attacker spin
+# world-space fx + fighter-box spins (sky_rally + slam)
 var _world_fx: Node2D = null
-var _ball: ColorRect = null         # the takraw ball; becomes the blast at the end
+var _ball: ColorRect = null         # sky_rally: takraw ball/blast; slam: shockwave
 var _ball_pos: Vector2 = Vector2.ZERO
 var _ball_from: Vector2 = Vector2.ZERO   # where the last touch left it (sag base)
 var _atk_box: ColorRect = null      # the attacker's visual Box, spun for kicks 3/4
+var _vic_box: ColorRect = null      # the victim's visual Box, inverted during the lift
 
 
 ## Detect + begin a cinematic ultimate this frame. Returns a live sequencer, or
@@ -129,9 +152,13 @@ static func try_start(atk: CharacterController, def: CharacterController,
 		camera: Camera2D, hud: CanvasLayer, fx_parent: Node,
 		left_x: float, right_x: float) -> UltimateCinematic:
 	var move: MoveData = atk.get_current_move()
+	if move == null:
+		move = atk.get_grab_move()   # a grab ultimate (Jacob) sits in GRAB_ATTEMPT, not SKILL
 	if move == null or not move.is_cinematic:
 		return null
-	if atk.fsm_state() != CSM.State.SKILL or atk.get_frame_in_state() != 0:
+	var st: int = atk.fsm_state()
+	if (st != CSM.State.SKILL and st != CSM.State.GRAB_ATTEMPT) \
+			or atk.get_frame_in_state() != 0:
 		return null
 	# No cutscene on a KO'd body or a fighter inside a throw pair.
 	if def.fsm_state() == CSM.State.KO or def.fsm_state() == CSM.State.GRABBED \
@@ -179,6 +206,18 @@ func step() -> bool:
 			_step_spike_flight(dir)
 		Phase.BLAST:
 			_step_blast()
+		Phase.LUNGE:
+			_step_lunge(dir)
+		Phase.CLINCH:
+			_step_clinch(dir)
+		Phase.LIFT:
+			_step_lift(dir)
+		Phase.APEX:
+			_step_apex(dir)
+		Phase.SLAM:
+			_step_slam(dir)
+		Phase.IMPACT:
+			_step_impact()
 		Phase.LAUNCH:
 			_step_launch(dir)
 		Phase.ZOOM_OUT:
@@ -202,14 +241,17 @@ func _step_zoom_in() -> void:
 	# Ground a frozen airborne victim so the finisher lines up at body height.
 	victim.position.y = lerpf(_victim_start_y, _floor_y, e)
 	if _t >= ZOOM_IN_FRAMES:
-		if _style == "sky_rally":
-			_atk_base_x = attacker.position.x
-			_atk_from_y = _floor_y
-			_ball_pos = Vector2(_juggle_x(), _floor_y + BALL_START_Y)
-			_ball_from = _ball_pos
-			_enter(Phase.RALLY_WINDUP)
-		else:
-			_enter(Phase.RUN)
+		match _style:
+			"sky_rally":
+				_atk_base_x = attacker.position.x
+				_atk_from_y = _floor_y
+				_ball_pos = Vector2(_juggle_x(), _floor_y + BALL_START_Y)
+				_ball_from = _ball_pos
+				_enter(Phase.RALLY_WINDUP)
+			"slam":
+				_enter(Phase.LUNGE)
+			_:
+				_enter(Phase.RUN)
 
 
 func _step_launch(dir: float) -> void:
@@ -383,6 +425,86 @@ func _step_blast() -> void:
 		_enter(Phase.LAUNCH)
 
 
+# --- "slam" phases ---
+
+func _step_lunge(dir: float) -> void:
+	# Heavy stomping march — the invulnerable walk-through (everything else is
+	# frozen, so the invuln is implicit; the stomp shakes sell the weight).
+	var gap: float = absf(victim.position.x - attacker.position.x)
+	if gap > CLINCH_GAP and _t <= LUNGE_CAP:
+		attacker.position.x += minf(LUNGE_SPEED, gap - CLINCH_GAP) * dir
+		if _t % 12 == 0:
+			_shake = maxf(_shake, 2.5)
+		_follow(Vector2(attacker.position.x, FOCUS_Y), 0.3, FOCUS_ZOOM)
+	else:
+		_atk_base_x = _clamp_stage_x(victim.position.x - CLINCH_GAP * dir)
+		attacker.position.x = _atk_base_x
+		_flash.color.a = 0.3
+		_shake = 4.0
+		_enter(Phase.CLINCH)
+
+
+func _step_clinch(_dir: float) -> void:
+	# The seize: a held beat with the camera pushing in — no escape from here.
+	var e: float = _ease(_t / float(CLINCH_FRAMES))
+	_follow(Vector2(_mid_x(), FOCUS_Y), 0.25, lerpf(FOCUS_ZOOM, 2.2, e))
+	if _t >= CLINCH_FRAMES:
+		_enter(Phase.LIFT)
+
+
+func _step_lift(dir: float) -> void:
+	# The hoist: the victim is carried up and turned upside down overhead —
+	# the slow-mo beat going up.
+	var e: float = _ease(_t / float(LIFT_FRAMES))
+	victim.position.x = lerpf(attacker.position.x + CLINCH_GAP * dir,
+			attacker.position.x, e)
+	victim.position.y = _floor_y - LIFT_HEIGHT * e
+	_set_vic_spin(PI * e)
+	_follow(Vector2(attacker.position.x, FOCUS_Y - 30.0 * e), 0.2, 2.2)
+	if _t >= LIFT_FRAMES:
+		_enter(Phase.APEX)
+
+
+func _step_apex(_dir: float) -> void:
+	# Hang time: inverted at the top, a small tremble, camera at full push.
+	victim.position.y = _floor_y - LIFT_HEIGHT + sin(_t * 0.7) * 2.0
+	_shake = maxf(_shake, 1.2)
+	_follow(Vector2(attacker.position.x, FOCUS_Y - 30.0), 0.25, FINAL_ZOOM)
+	if _t >= APEX_FRAMES:
+		_enter(Phase.SLAM)
+
+
+func _step_slam(dir: float) -> void:
+	# The piledriver: instant by contrast with the lift.
+	var t: float = _t / float(SLAM_FRAMES)
+	victim.position.x = attacker.position.x + 34.0 * t * dir
+	victim.position.y = _floor_y - LIFT_HEIGHT * (1.0 - t * t)   # accelerating down
+	if _t >= SLAM_FRAMES:
+		victim.position = Vector2(
+				_clamp_stage_x(attacker.position.x + 34.0 * dir), _floor_y)
+		_set_vic_spin(0.0)
+		_ball_pos = victim.position
+		_flash.color.a = 0.9
+		_shake = 14.0
+		_enter(Phase.IMPACT)
+
+
+func _step_impact() -> void:
+	# The earth breaks: a dust shockwave races out along the floor and fades
+	# while the camera holds on the crater.
+	var e: float = _ease(_t / float(IMPACT_FRAMES))
+	var w: float = lerpf(30.0, SHOCKWAVE_W, e)
+	_ball.color = Color(SHOCKWAVE_COLOR, SHOCKWAVE_COLOR.a * (1.0 - e))
+	_ball.visible = true
+	_ball.position = Vector2(_ball_pos.x - w * 0.5, _floor_y - 8.0)
+	_ball.size = Vector2(w, 10.0)
+	_follow(Vector2(victim.position.x, FOCUS_Y), 0.3, FINAL_ZOOM)
+	if _t >= IMPACT_FRAMES:
+		_ball.visible = false
+		_launch_vel = SLAM_BOUNCE   # piledriven in place: a bounce, not a flyback
+		_enter(Phase.LAUNCH)
+
+
 # --- Internals ---
 
 func _begin(move: MoveData, fx_parent: Node) -> void:
@@ -392,13 +514,18 @@ func _begin(move: MoveData, fx_parent: Node) -> void:
 	victim.begin_cinematic_lock()
 	_hud.visible = false
 	_split_damage(move.damage,
-			SKY_RALLY_FRACTIONS if _style == "sky_rally" else RUSH_FRACTIONS)
+			RUSH_FRACTIONS if _style == "rush" else FINISHER_ONLY)
 	_build_fx(fx_parent)
 	if _style == "sky_rally":
 		_build_world_fx(fx_parent)
 		_atk_box = attacker.get_node_or_null("Box")
 		if _atk_box != null:
 			_atk_box.pivot_offset = _atk_box.size * 0.5   # spin about the body centre
+	elif _style == "slam":
+		_build_world_fx(fx_parent)   # the ball prop doubles as the shockwave
+		_vic_box = victim.get_node_or_null("Box")
+		if _vic_box != null:
+			_vic_box.pivot_offset = _vic_box.size * 0.5   # inverted about the body centre
 
 
 func _split_damage(total: int, fractions: Array[float]) -> void:
@@ -421,7 +548,8 @@ func _finish() -> void:
 	_camera.zoom = Vector2.ONE
 	_camera.offset = Vector2.ZERO
 	_hud.visible = true
-	_set_box_spin(0.0)   # safety: never leave the fighter tilted
+	_set_box_spin(0.0)   # safety: never leave a fighter tilted
+	_set_vic_spin(0.0)
 	if _fx != null:
 		_fx.queue_free()
 		_fx = null
@@ -455,6 +583,11 @@ func _ball_set(centre: Vector2, s: float) -> void:
 func _set_box_spin(angle: float) -> void:
 	if _atk_box != null:
 		_atk_box.rotation = angle
+
+
+func _set_vic_spin(angle: float) -> void:
+	if _vic_box != null:
+		_vic_box.rotation = angle
 
 
 func _clamp_stage_x(x: float) -> float:
@@ -518,9 +651,9 @@ func _build_fx(fx_parent: Node) -> void:
 	fx_parent.add_child(_fx)
 
 
-## Sky-Rally-only world-space prop: one ColorRect that plays the takraw ball
-## through the rally, the spike, and the final blast. Lives in the scene canvas
-## so it inherits the camera zoom like the fighters do.
+## World-space prop: one ColorRect that plays the takraw ball / spike blast
+## (sky_rally) or the ground shockwave (slam). Lives in the scene canvas so it
+## inherits the camera zoom like the fighters do.
 func _build_world_fx(fx_parent: Node) -> void:
 	_world_fx = Node2D.new()
 	_ball = ColorRect.new()
