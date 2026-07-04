@@ -5,15 +5,18 @@ extends Control
 ## players are locked, their picks go to MatchSelection and we move on to loading.
 
 const SLOTS: Array[Dictionary] = [
-	{"id": "jerb", "name": "JERB", "locked": false, "data_path": "res://characters/jerb/jerb_data.tres", "color": Color(0.2, 0.5, 0.9, 1)},
-	{"id": "rainne", "name": "RAINNE", "locked": false, "data_path": "res://characters/rainne/rainne_data.tres", "color": Color(0.9, 0.55, 0.15, 1)},
-	{"id": "jacob", "name": "JACOB", "locked": false, "data_path": "res://characters/jacob/jacob_data.tres", "color": Color(0.62, 0.16, 0.18, 1)},
-	{"id": "sofia", "name": "SOFIA", "locked": false, "data_path": "res://characters/sofia/sofia_data.tres", "color": Color(0.85, 0.25, 0.4, 1)},
-	{"id": "locked_1", "name": "???", "locked": true, "data_path": "", "color": Color(0.22, 0.22, 0.25, 1)},
+	{"id": "jerb", "name": "JERB", "tag": "ALL-ROUNDER", "locked": false, "data_path": "res://characters/jerb/jerb_data.tres", "color": Color(0.2, 0.5, 0.9, 1)},
+	{"id": "rainne", "name": "RAINNE", "tag": "STRIKER", "locked": false, "data_path": "res://characters/rainne/rainne_data.tres", "color": Color(0.9, 0.55, 0.15, 1)},
+	{"id": "jacob", "name": "JACOB", "tag": "GRAPPLER", "locked": false, "data_path": "res://characters/jacob/jacob_data.tres", "color": Color(0.62, 0.16, 0.18, 1)},
+	{"id": "sofia", "name": "SOFIA", "tag": "SKIRMISHER", "locked": false, "data_path": "res://characters/sofia/sofia_data.tres", "color": Color(0.85, 0.25, 0.4, 1)},
+	{"id": "locked_1", "name": "???", "tag": "COMING SOON", "locked": true, "data_path": "", "color": Color(0.22, 0.22, 0.25, 1)},
 ]
 
-const SLOT_SIZE := Vector2(150, 170)
+const SLOT_SIZE := Vector2(190, 260)
+const PORTRAIT_HEIGHT := 180.0
 const CURSOR_MARGIN := 8.0
+
+const FIGHTER_SILHOUETTE := preload("res://art/ui/silhouettes/fighter.svg")
 
 @onready var _slots_row: HBoxContainer = $CenterContainer/SlotsRow
 @onready var _p1_cursor: Control = $P1Cursor
@@ -38,33 +41,81 @@ func _ready() -> void:
 
 
 func _build_slot(slot: Dictionary) -> Control:
-	var box := VBoxContainer.new()
-	box.custom_minimum_size = SLOT_SIZE
-	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	var tile := PanelContainer.new()
+	tile.custom_minimum_size = SLOT_SIZE
+	tile.theme_type_variation = "CharacterTileLocked" if slot["locked"] else "CharacterTile"
 
-	var swatch := ColorRect.new()
-	swatch.custom_minimum_size = Vector2(SLOT_SIZE.x, 110)
-	swatch.color = slot["color"]
-	if slot["locked"]:
-		swatch.color.a = 0.5
-	box.add_child(swatch)
+	var box := VBoxContainer.new()
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 6)
+	tile.add_child(box)
+
+	box.add_child(_build_portrait(slot))
 
 	var name_label := Label.new()
 	name_label.text = slot["name"]
+	name_label.theme_type_variation = "TileNameLabel"
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 20)
 	box.add_child(name_label)
 
-	if slot["locked"]:
-		var lock_label := Label.new()
-		lock_label.text = "LOCKED"
-		lock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		lock_label.add_theme_font_size_override("font_size", 14)
-		lock_label.add_theme_color_override("font_color", Color(0.9, 0.3, 0.3, 1))
-		box.add_child(lock_label)
+	var tag_label := Label.new()
+	tag_label.text = slot["tag"]
+	tag_label.theme_type_variation = "TagLabel"
+	tag_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if not slot["locked"]:
+		tag_label.add_theme_color_override("font_color", slot["color"])
+	box.add_child(tag_label)
 
-	_slots_row.add_child(box)
-	return box
+	_slots_row.add_child(tile)
+	return tile
+
+
+## Characters are intentionally undesigned: the portrait is a shared dark
+## silhouette tinted toward the fighter's accent color over an accent gradient.
+func _build_portrait(slot: Dictionary) -> Control:
+	var accent: Color = slot["color"]
+	var portrait := Control.new()
+	portrait.custom_minimum_size = Vector2(0, PORTRAIT_HEIGHT)
+
+	var backdrop := TextureRect.new()
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	backdrop.texture = _make_backdrop_texture(accent)
+	portrait.add_child(backdrop)
+
+	var silhouette := TextureRect.new()
+	silhouette.set_anchors_preset(Control.PRESET_FULL_RECT)
+	silhouette.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	silhouette.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	silhouette.texture = FIGHTER_SILHOUETTE
+	if slot["locked"]:
+		silhouette.modulate = Color(0.35, 0.35, 0.4, 0.4)
+	else:
+		silhouette.modulate = accent.lerp(Color.BLACK, 0.7)
+	portrait.add_child(silhouette)
+
+	if slot["locked"]:
+		var mystery := Label.new()
+		mystery.text = "?"
+		mystery.set_anchors_preset(Control.PRESET_FULL_RECT)
+		mystery.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		mystery.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		mystery.add_theme_font_size_override("font_size", 64)
+		mystery.add_theme_color_override("font_color", Color(0.604, 0.561, 0.478, 0.9))
+		portrait.add_child(mystery)
+
+	return portrait
+
+
+func _make_backdrop_texture(accent: Color) -> GradientTexture2D:
+	var gradient := Gradient.new()
+	gradient.offsets = PackedFloat32Array([0.0, 1.0])
+	gradient.colors = PackedColorArray([Color(accent, 0.35), Color(accent, 0.0)])
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill_from = Vector2(0.5, 0.0)
+	texture.fill_to = Vector2(0.5, 1.0)
+	return texture
 
 
 func _init_cursors() -> void:
