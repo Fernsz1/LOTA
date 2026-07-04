@@ -28,6 +28,8 @@ const PUSH_H: float = 80.0            # pushbox height — must match visual box
 @export var move_heavy: MoveData      # 2.3 — heavy attack frame data (knockdown)
 @export var move_skill: MoveData      # 3.1 — skill attack frame data
 @export var move_ultimate: MoveData   # 3.1 — ultimate attack frame data
+@export var move_air_fast: MoveData   # air fast attack frame data (jump-in poke)
+@export var move_air_heavy: MoveData  # air heavy attack frame data (spike)
 
 # 3.4 — per-character movement (defaults = the consts above; overridden by CharacterData).
 var _walk_speed: float = WALK_SPEED
@@ -69,6 +71,7 @@ var _stun_frames: int = 0             # length of the current HITSTUN/BLOCKSTUN
 var _pushback_vel: float = 0.0        # px/frame applied during a reaction, decaying
 var _projectile_spawned_this_move: bool = false   # 3.2: one projectile per attack
 var _juggle_count: int = 0   # 3.5: airborne hits accumulated this combo; resets on landing
+var _air_attack_used: bool = false   # one air attack per jump; cleared on landing / fresh jump
 signal projectile_requested(data: ProjectileData, origin: Vector2, facing: int)
 
 var _overlay: Node = null
@@ -89,9 +92,12 @@ func _ready() -> void:
 	health = _max_health   # 6.3: the field initializer ran before stats loaded; seed from the real max
 	_box.color = box_color
 	# Validate frame data on load (conventions: validate with assert/push_error).
-	for m in [move_fast, move_heavy, move_skill, move_ultimate]:
+	for m in [move_fast, move_heavy, move_skill, move_ultimate, move_air_fast, move_air_heavy]:
 		if m != null:
 			m.validate()
+	for m in [move_air_fast, move_air_heavy]:
+		if m != null and (m.is_grab or m.is_counter):
+			push_error("air move '%s': grabs/counters are ground-only" % m.move_name)
 	# Tell Godot the scene-file position is the true starting point — prevents the
 	# interpolator from visually sliding in from the origin on the first frame.
 	reset_physics_interpolation()
@@ -115,6 +121,8 @@ func _apply_character_data() -> void:
 	if character_data.move_heavy != null: move_heavy = character_data.move_heavy
 	if character_data.move_skill != null: move_skill = character_data.move_skill
 	if character_data.move_ultimate != null: move_ultimate = character_data.move_ultimate
+	if character_data.move_air_fast != null: move_air_fast = character_data.move_air_fast
+	if character_data.move_air_heavy != null: move_air_heavy = character_data.move_air_heavy
 	_walk_speed = character_data.walk_speed
 	_walk_b_speed = character_data.walk_b_speed
 	_jump_velocity = character_data.jump_velocity
@@ -180,6 +188,11 @@ func _resolve_busy_exits(buf: InputBuffer) -> void:
 					_fsm.request(CharacterStateMachine.State.IDLE)
 			elif _current_move.in_cancel_window(_fsm.frame_in_state):
 				_try_cancel_input(buf)
+		CharacterStateMachine.State.AIR_FAST_ATTACK, CharacterStateMachine.State.AIR_HEAVY_ATTACK:
+			# Finished while still airborne → neutral fall. Landing mid-move is the
+			# _apply_movement floor check (→ JUMP_LAND). No cancels in air (v1).
+			if _current_move == null or _fsm.frame_in_state >= _current_move.total():
+				_fsm.request(CharacterStateMachine.State.JUMP_AIR)
 		CharacterStateMachine.State.GRAB_ATTEMPT:
 			# 6.4 — whiffed grab recovers to IDLE. A CONNECT is resolved externally
 			# (ThrowSequencer moves us to THROW_RELEASE before this fires). GRABBED
@@ -219,8 +232,22 @@ func _process_input(buf: InputBuffer) -> void:
 	if _bwd_tap_timer < 999:
 		_bwd_tap_timer += 1
 
-	# Air control: steer horizontal velocity while airborne without changing FSM state.
+	# Airborne: air attacks (one per jump, heavy > fast) then air control.
+	# During an air attack the fighter is committed — momentum keeps, no steering.
 	if CharacterStateMachine.is_airborne(_fsm.state):
+		if CharacterStateMachine.is_attacking(_fsm.state):
+			return
+		if not _air_attack_used:
+			if move_air_heavy != null and buf.pressed_within(InputBuffer.HEAVY, ATTACK_BUFFER) \
+					and _fsm.request(CharacterStateMachine.State.AIR_HEAVY_ATTACK):
+				_arm(move_air_heavy)
+				_air_attack_used = true
+				return
+			if move_air_fast != null and buf.pressed_within(InputBuffer.FAST, ATTACK_BUFFER) \
+					and _fsm.request(CharacterStateMachine.State.AIR_FAST_ATTACK):
+				_arm(move_air_fast)
+				_air_attack_used = true
+				return
 		if fwd_held:
 			_vel.x = _jump_f_speed * facing
 		elif bwd_held:
@@ -271,7 +298,11 @@ func _process_input(buf: InputBuffer) -> void:
 
 	# Normal ground movement (4-frame action buffer on jump).
 	if buf.pressed_within(InputBuffer.UP, 4):
-		_fsm.request(CharacterStateMachine.State.JUMP_START)
+		# Latch also clears here (not just on landing): a fighter hit out of an air
+		# attack can ride hitstun to the floor and exit to IDLE without ever passing
+		# the landing block — without this a stuck latch would eat the next jump.
+		if _fsm.request(CharacterStateMachine.State.JUMP_START):
+			_air_attack_used = false
 	elif down_held:
 		_fsm.request(CharacterStateMachine.State.CROUCH)
 	elif fwd_held:
@@ -299,8 +330,9 @@ func _apply_movement() -> void:
 			_vel.x = -_backdash_speed * facing
 			_vel.y = 0.0
 		CharacterStateMachine.State.JUMP_AIR, CharacterStateMachine.State.JUMP_F, \
-		CharacterStateMachine.State.JUMP_B:
-			_vel.y += _gravity   # horizontal vel preserved from jump launch
+		CharacterStateMachine.State.JUMP_B, \
+		CharacterStateMachine.State.AIR_FAST_ATTACK, CharacterStateMachine.State.AIR_HEAVY_ATTACK:
+			_vel.y += _gravity   # horizontal vel preserved from jump launch / attack start
 		CharacterStateMachine.State.HITSTUN, CharacterStateMachine.State.BLOCKSTUN:
 			# Pushback (2.4): slide away from the attacker, decaying
 			_vel.x = _pushback_vel
@@ -339,6 +371,7 @@ func _apply_movement() -> void:
 		position.y = _floor_y
 		_vel = Vector2.ZERO
 		_juggle_count = 0
+		_air_attack_used = false
 		_fsm.request(CharacterStateMachine.State.JUMP_LAND)
 	else:
 		position.y = minf(position.y, _floor_y)
@@ -630,6 +663,7 @@ func reset_for_round(spawn_x: float) -> void:
 	_move_has_hit = false
 	_projectile_spawned_this_move = false
 	_juggle_count = 0
+	_air_attack_used = false
 	active_hitboxes_local = []
 	_fsm.reset(CharacterStateMachine.State.IDLE)
 	reset_physics_interpolation()

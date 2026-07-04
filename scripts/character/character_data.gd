@@ -26,3 +26,5 @@ const MD := preload("res://scripts/combat/move_data.gd")
 @export var move_heavy: MD
 @export var move_skill: MD
 @export var move_ultimate: MD
+@export var move_air_fast: MD
+@export var move_air_heavy: MD
