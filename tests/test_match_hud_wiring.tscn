@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://b8wh2xq7n3wud"]
+[gd_scene format=3 uid="uid://b8wh2xq7n3wud"]
 
 [ext_resource type="Script" path="res://tests/test_match_hud_wiring.gd" id="1_wir"]
 
