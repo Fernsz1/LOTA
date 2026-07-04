@@ -1,89 +1,342 @@
-[gd_scene format=3 uid="uid://d2aun7w274ukm"]
+[gd_scene load_steps=16 format=3 uid="uid://d2aun7w274ukm"]
 
 [ext_resource type="Script" path="res://scripts/match_hud.gd" id="1_mhud"]
+[ext_resource type="FontFile" path="res://art/fonts/Bangers-Regular.ttf" id="2_bangers"]
+[ext_resource type="Texture2D" path="res://assets/hud/portrait_plate_p1.png" id="3_pp1"]
+[ext_resource type="Texture2D" path="res://assets/hud/portrait_plate_p2.png" id="4_pp2"]
+[ext_resource type="Texture2D" path="res://assets/hud/health_track.png" id="5_htrk"]
+[ext_resource type="Texture2D" path="res://assets/hud/health_fill_blue.png" id="6_hfb"]
+[ext_resource type="Texture2D" path="res://assets/hud/health_fill_red.png" id="7_hfr"]
+[ext_resource type="Texture2D" path="res://assets/hud/meter_track.png" id="8_mtrk"]
+[ext_resource type="Texture2D" path="res://assets/hud/meter_fill_blue.png" id="9_mfb"]
+[ext_resource type="Texture2D" path="res://assets/hud/meter_fill_red.png" id="10_mfr"]
+[ext_resource type="Texture2D" path="res://assets/hud/timer_plate.png" id="11_tp"]
+
+[sub_resource type="LabelSettings" id="LS_name_p1"]
+font = ExtResource("2_bangers")
+font_size = 46
+font_color = Color(0.165, 0.659, 1, 1)
+outline_size = 6
+outline_color = Color(0, 0, 0, 1)
+shadow_size = 1
+shadow_color = Color(0, 0, 0, 1)
+shadow_offset = Vector2(4, 4)
+
+[sub_resource type="LabelSettings" id="LS_name_p2"]
+font = ExtResource("2_bangers")
+font_size = 46
+font_color = Color(1, 0.231, 0.231, 1)
+outline_size = 6
+outline_color = Color(0, 0, 0, 1)
+shadow_size = 1
+shadow_color = Color(0, 0, 0, 1)
+shadow_offset = Vector2(-4, 4)
+
+[sub_resource type="LabelSettings" id="LS_timer"]
+font = ExtResource("2_bangers")
+font_size = 104
+font_color = Color(1, 0.831, 0, 1)
+outline_size = 6
+outline_color = Color(0, 0, 0, 1)
 
 [node name="MatchHUD" type="CanvasLayer"]
 script = ExtResource("1_mhud")
 
-[node name="P1Bar" type="ColorRect" parent="."]
-offset_left = 40.0
-offset_top = 30.0
-offset_right = 520.0
-offset_bottom = 58.0
-color = Color(0.1, 0.1, 0.1, 0.7)
+[node name="HUD" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
 
-[node name="Fill" type="ColorRect" parent="P1Bar"]
-offset_right = 480.0
+[node name="P1" type="Control" parent="HUD"]
+offset_left = 40.0
+offset_top = 34.0
+offset_right = 820.0
+offset_bottom = 260.0
+scale = Vector2(0.6667, 0.6667)
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="HUD/P1"]
+offset_right = 150.0
+offset_bottom = 170.0
+texture = ExtResource("3_pp1")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Img" type="TextureRect" parent="HUD/P1/Portrait"]
+show_behind_parent = true
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 138.0
+offset_bottom = 158.0
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Badge" type="Label" parent="HUD/P1/Portrait"]
+offset_left = -6.0
+offset_top = -18.0
+offset_right = 40.0
 offset_bottom = 28.0
-color = Color(0.3, 0.8, 0.35, 1)
+text = "P1"
+label_settings = SubResource("LS_name_p1")
 
-[node name="P2Bar" type="ColorRect" parent="."]
-offset_left = 760.0
-offset_top = 30.0
-offset_right = 1240.0
-offset_bottom = 58.0
-color = Color(0.1, 0.1, 0.1, 0.7)
+[node name="Name" type="Label" parent="HUD/P1"]
+offset_left = 170.0
+offset_top = 0.0
+offset_right = 780.0
+offset_bottom = 56.0
+text = "FIGHTER"
+label_settings = SubResource("LS_name_p1")
 
-[node name="Fill" type="ColorRect" parent="P2Bar"]
-offset_right = 480.0
+[node name="Tag" type="Label" parent="HUD/P1"]
+offset_left = 170.0
+offset_top = 60.0
+offset_right = 500.0
+offset_bottom = 84.0
+theme_override_colors/font_color = Color(0.02, 0.07, 0.12, 1)
+theme_override_font_sizes/font_size = 15
+text = "TECHNICAL / ZONER"
+
+[node name="Pips" type="HBoxContainer" parent="HUD/P1"]
+offset_left = 520.0
+offset_top = 60.0
+offset_right = 600.0
+offset_bottom = 84.0
+theme_override_constants/separation = 12
+
+[node name="Pip0" type="ColorRect" parent="HUD/P1/Pips"]
+custom_minimum_size = Vector2(22, 22)
+pivot_offset = Vector2(11, 11)
+rotation = 0.785398
+color = Color(0.149, 0.149, 0.18, 1)
+
+[node name="Pip1" type="ColorRect" parent="HUD/P1/Pips"]
+custom_minimum_size = Vector2(22, 22)
+pivot_offset = Vector2(11, 11)
+rotation = 0.785398
+color = Color(0.149, 0.149, 0.18, 1)
+
+[node name="Health" type="TextureProgressBar" parent="HUD/P1"]
+offset_left = 170.0
+offset_top = 92.0
+offset_right = 730.0
+offset_bottom = 138.0
+max_value = 100.0
+step = 0.01
+value = 100.0
+fill_mode = 0
+nine_patch_stretch = true
+texture_under = ExtResource("5_htrk")
+texture_progress = ExtResource("6_hfb")
+
+[node name="Flash" type="ColorRect" parent="HUD/P1/Health"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(1, 1, 1, 1)
+modulate = Color(1, 1, 1, 0)
+mouse_filter = 2
+
+[node name="MeterRow" type="HBoxContainer" parent="HUD/P1"]
+offset_left = 170.0
+offset_top = 148.0
+offset_right = 780.0
+offset_bottom = 178.0
+theme_override_constants/separation = 12
+alignment = 0
+
+[node name="MeterLabel" type="Label" parent="HUD/P1/MeterRow"]
+theme_override_colors/font_color = Color(0.651, 1, 0, 1)
+text = "SIGABO"
+label_settings = null
+
+[node name="Meter" type="TextureProgressBar" parent="HUD/P1/MeterRow"]
+custom_minimum_size = Vector2(0, 22)
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 100.0
+step = 0.01
+value = 0.0
+fill_mode = 0
+nine_patch_stretch = true
+texture_under = ExtResource("8_mtrk")
+texture_progress = ExtResource("9_mfb")
+
+[node name="Ready" type="Label" parent="HUD/P1/MeterRow"]
+custom_minimum_size = Vector2(150, 0)
+modulate = Color(1, 1, 1, 0)
+theme_override_colors/font_color = Color(0.651, 1, 0, 1)
+text = "SUPER READY!"
+
+[node name="P2" type="Control" parent="HUD"]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -820.0
+offset_top = 34.0
+offset_right = -40.0
+offset_bottom = 260.0
+pivot_offset = Vector2(780, 0)
+scale = Vector2(0.6667, 0.6667)
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="HUD/P2"]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -150.0
+offset_bottom = 170.0
+texture = ExtResource("4_pp2")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Img" type="TextureRect" parent="HUD/P2/Portrait"]
+show_behind_parent = true
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 138.0
+offset_bottom = 158.0
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Badge" type="Label" parent="HUD/P2/Portrait"]
+offset_left = 110.0
+offset_top = -18.0
+offset_right = 156.0
 offset_bottom = 28.0
-color = Color(0.3, 0.8, 0.35, 1)
+text = "P2"
+label_settings = SubResource("LS_name_p2")
 
-[node name="P1Meter" type="ColorRect" parent="."]
-offset_left = 40.0
-offset_top = 62.0
-offset_right = 520.0
-offset_bottom = 70.0
-color = Color(0.1, 0.1, 0.1, 0.7)
-
-[node name="Fill" type="ColorRect" parent="P1Meter"]
-offset_right = 0.0
-offset_bottom = 8.0
-color = Color(0.55, 0.45, 0.15, 1)
-
-[node name="P2Meter" type="ColorRect" parent="."]
-offset_left = 760.0
-offset_top = 62.0
-offset_right = 1240.0
-offset_bottom = 70.0
-color = Color(0.1, 0.1, 0.1, 0.7)
-
-[node name="Fill" type="ColorRect" parent="P2Meter"]
-offset_right = 0.0
-offset_bottom = 8.0
-color = Color(0.55, 0.45, 0.15, 1)
-
-[node name="Timer" type="Label" parent="."]
-offset_left = 590.0
-offset_top = 26.0
-offset_right = 690.0
-offset_bottom = 70.0
-theme_override_font_sizes/font_size = 36
-text = "99"
-horizontal_alignment = 1
-
-[node name="P1Rounds" type="Label" parent="."]
-offset_left = 40.0
-offset_top = 74.0
-offset_right = 520.0
-offset_bottom = 102.0
-theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
-theme_override_font_sizes/font_size = 24
-
-[node name="P2Rounds" type="Label" parent="."]
-offset_left = 760.0
-offset_top = 74.0
-offset_right = 1240.0
-offset_bottom = 102.0
-theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
-theme_override_font_sizes/font_size = 24
+[node name="Name" type="Label" parent="HUD/P2"]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 610.0
+offset_bottom = 56.0
 horizontal_alignment = 2
+text = "FIGHTER"
+label_settings = SubResource("LS_name_p2")
 
-[node name="Announce" type="Label" parent="."]
-offset_left = 340.0
-offset_top = 240.0
-offset_right = 940.0
-offset_bottom = 320.0
-theme_override_font_sizes/font_size = 64
+[node name="Tag" type="Label" parent="HUD/P2"]
+offset_left = 280.0
+offset_top = 60.0
+offset_right = 610.0
+offset_bottom = 84.0
+horizontal_alignment = 2
+theme_override_colors/font_color = Color(0.122, 0.02, 0.02, 1)
+theme_override_font_sizes/font_size = 15
+text = "RUSHDOWN / BRAWLER"
+
+[node name="Pips" type="HBoxContainer" parent="HUD/P2"]
+offset_left = 180.0
+offset_top = 60.0
+offset_right = 260.0
+offset_bottom = 84.0
+theme_override_constants/separation = 12
+
+[node name="Pip0" type="ColorRect" parent="HUD/P2/Pips"]
+custom_minimum_size = Vector2(22, 22)
+pivot_offset = Vector2(11, 11)
+rotation = 0.785398
+color = Color(0.149, 0.149, 0.18, 1)
+
+[node name="Pip1" type="ColorRect" parent="HUD/P2/Pips"]
+custom_minimum_size = Vector2(22, 22)
+pivot_offset = Vector2(11, 11)
+rotation = 0.785398
+color = Color(0.149, 0.149, 0.18, 1)
+
+[node name="Health" type="TextureProgressBar" parent="HUD/P2"]
+offset_left = 50.0
+offset_top = 92.0
+offset_right = 610.0
+offset_bottom = 138.0
+max_value = 100.0
+step = 0.01
+value = 100.0
+fill_mode = 1
+nine_patch_stretch = true
+texture_under = ExtResource("5_htrk")
+texture_progress = ExtResource("7_hfr")
+
+[node name="Flash" type="ColorRect" parent="HUD/P2/Health"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(1, 1, 1, 1)
+modulate = Color(1, 1, 1, 0)
+mouse_filter = 2
+
+[node name="MeterRow" type="HBoxContainer" parent="HUD/P2"]
+offset_left = 0.0
+offset_top = 148.0
+offset_right = 610.0
+offset_bottom = 178.0
+theme_override_constants/separation = 12
+alignment = 0
+
+[node name="Ready" type="Label" parent="HUD/P2/MeterRow"]
+custom_minimum_size = Vector2(150, 0)
+modulate = Color(1, 1, 1, 0)
+horizontal_alignment = 2
+theme_override_colors/font_color = Color(0.651, 1, 0, 1)
+text = "SUPER READY!"
+
+[node name="Meter" type="TextureProgressBar" parent="HUD/P2/MeterRow"]
+custom_minimum_size = Vector2(0, 22)
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 100.0
+step = 0.01
+value = 0.0
+fill_mode = 1
+nine_patch_stretch = true
+texture_under = ExtResource("8_mtrk")
+texture_progress = ExtResource("10_mfr")
+
+[node name="MeterLabel" type="Label" parent="HUD/P2/MeterRow"]
+theme_override_colors/font_color = Color(0.651, 1, 0, 1)
+text = "SIGABO"
+
+[node name="Center" type="Control" parent="HUD"]
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -100.0
+offset_top = 30.0
+offset_right = 100.0
+offset_bottom = 400.0
+pivot_offset = Vector2(100, 0)
+scale = Vector2(0.6667, 0.6667)
+mouse_filter = 2
+
+[node name="Round" type="Label" parent="HUD/Center"]
+offset_right = 200.0
+offset_bottom = 28.0
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(1, 0.831, 0, 1)
+text = "ROUND 1"
+
+[node name="TimerPlate" type="TextureRect" parent="HUD/Center"]
+offset_left = 14.0
+offset_top = 34.0
+offset_right = 186.0
+offset_bottom = 184.0
+texture = ExtResource("11_tp")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Timer" type="Label" parent="HUD/Center/TimerPlate"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 horizontal_alignment = 1
 vertical_alignment = 1
+text = "99"
+label_settings = SubResource("LS_timer")
+
+[node name="Announce" type="Label" parent="HUD/Center"]
+offset_left = -300.0
+offset_top = 200.0
+offset_right = 500.0
+offset_bottom = 300.0
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 64
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8

@@ -24,8 +24,21 @@ func _ready() -> void:
 	_p1 = get_node(p1_path)
 	_p2 = get_node(p2_path)
 	_hud = get_node(hud_path)
+	push_fighter(_hud, 1, _p1.character_data)
+	push_fighter(_hud, 2, _p2.character_data)
 	_state.start_match()
 	_reset_round()
+
+# Maps a CharacterData (name + signature color) onto the HUD's fighter plate.
+# Null-safe: falls back to "P1"/"P2" and the default accent when data is missing.
+static func push_fighter(hud: Node, player: int, data) -> void:
+	var fighter_name: String = "P%d" % player
+	var color: Color = Color(0.165, 0.659, 1, 1) if player == 1 else Color(1, 0.231, 0.231, 1)
+	if data != null:
+		if data.character_name != "":
+			fighter_name = data.character_name
+		color = data.color
+	hud.set_fighter(player, fighter_name, color)
 
 func _physics_process(_delta: float) -> void:
 	match _state.phase:
