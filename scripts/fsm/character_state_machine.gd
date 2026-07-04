@@ -15,6 +15,7 @@ enum State {
 	FAST_ATTACK, HEAVY_ATTACK, SKILL,
 	HITSTUN, BLOCKSTUN, KNOCKDOWN, GETUP, KO,
 	GRAB_ATTEMPT, GRABBED, THROW_RELEASE,   # 6.4 grabs — appended to keep ordinals stable
+	AIR_FAST_ATTACK, AIR_HEAVY_ATTACK,      # air attacks — appended to keep ordinals stable
 }
 
 # Targets a reaction may force into (from any non-KO state). GRABBED is the
@@ -83,13 +84,18 @@ func can_transition(to: State) -> bool:
 		State.IDLE, State.WALK_F, State.WALK_B, State.CROUCH, State.BLOCK:
 			return to in _ACTIONABLE_EXITS
 		State.JUMP_AIR, State.JUMP_F, State.JUMP_B:
-			return to == State.JUMP_LAND
+			return to == State.JUMP_LAND \
+				or to == State.AIR_FAST_ATTACK or to == State.AIR_HEAVY_ATTACK
 		State.JUMP_START:
 			return to == State.JUMP_AIR or to == State.JUMP_F or to == State.JUMP_B
 		State.JUMP_LAND, State.DASH, State.BACKDASH, State.GETUP:
 			return to == State.IDLE
 		State.FAST_ATTACK, State.HEAVY_ATTACK, State.SKILL:
 			return to == State.IDLE or to == State.JUMP_AIR
+		State.AIR_FAST_ATTACK, State.AIR_HEAVY_ATTACK:
+			# Finished airborne → back to neutral fall; touched the floor → landing
+			# cancel. Never directly to IDLE and never into another attack (no air chains).
+			return to == State.JUMP_AIR or to == State.JUMP_LAND
 		State.HITSTUN, State.BLOCKSTUN:
 			return to == State.IDLE or to == State.JUMP_AIR
 		State.KNOCKDOWN:
@@ -119,7 +125,8 @@ func on_ko() -> void:
 
 # --- State category predicates (the "data-light rules") ---
 static func is_airborne(s: State) -> bool:
-	return s == State.JUMP_AIR or s == State.JUMP_F or s == State.JUMP_B
+	return s == State.JUMP_AIR or s == State.JUMP_F or s == State.JUMP_B \
+		or s == State.AIR_FAST_ATTACK or s == State.AIR_HEAVY_ATTACK
 
 static func is_grounded(s: State) -> bool:
 	return not is_airborne(s)
@@ -129,7 +136,8 @@ static func is_actionable(s: State) -> bool:
 		or s == State.CROUCH or s == State.BLOCK
 
 static func is_attacking(s: State) -> bool:
-	return s == State.FAST_ATTACK or s == State.HEAVY_ATTACK or s == State.SKILL
+	return s == State.FAST_ATTACK or s == State.HEAVY_ATTACK or s == State.SKILL \
+		or s == State.AIR_FAST_ATTACK or s == State.AIR_HEAVY_ATTACK
 
 static func is_in_reaction(s: State) -> bool:
 	return s == State.HITSTUN or s == State.BLOCKSTUN or s == State.KNOCKDOWN \

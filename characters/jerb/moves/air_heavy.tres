@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="MoveData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
+
+[resource]
+script = ExtResource("1_move")
+move_name = "jerb_air_heavy"
+startup = 12
+active = 6
+recovery = 14
+hitboxes = Array[Rect2]([Rect2(0, -70, 50, 45)])
+damage = 100
+hitstun = 24
+blockstun = 14
+hitstop = 8
+pushback_hit = 4.0
+pushback_block = 3.0
+causes_knockdown = true

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="MoveData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
+
+[resource]
+script = ExtResource("1_move")
+move_name = "sofia_air_heavy"
+startup = 10
+active = 6
+recovery = 12
+hitboxes = Array[Rect2]([Rect2(0, -70, 46, 42)])
+damage = 90
+hitstun = 22
+blockstun = 13
+hitstop = 8
+pushback_hit = 3.5
+pushback_block = 2.5
+causes_knockdown = true

@@ -1,10 +1,12 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/character/character_data.gd" id="1_qxtw4"]
 [ext_resource type="Resource" path="res://characters/jerb/moves/jab.tres" id="2_fast"]
 [ext_resource type="Resource" path="res://characters/jerb/moves/heavy.tres" id="3_heavy"]
 [ext_resource type="Resource" path="res://characters/jerb/moves/skill.tres" id="4_skill"]
 [ext_resource type="Resource" path="res://characters/jerb/moves/ultimate.tres" id="5_ultimate"]
+[ext_resource type="Resource" path="res://characters/jerb/moves/air_fast.tres" id="6_afast"]
+[ext_resource type="Resource" path="res://characters/jerb/moves/air_heavy.tres" id="7_aheavy"]
 
 [resource]
 script = ExtResource("1_qxtw4")
@@ -20,3 +22,5 @@ move_fast = ExtResource("2_fast")
 move_heavy = ExtResource("3_heavy")
 move_skill = ExtResource("4_skill")
 move_ultimate = ExtResource("5_ultimate")
+move_air_fast = ExtResource("6_afast")
+move_air_heavy = ExtResource("7_aheavy")

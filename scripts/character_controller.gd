@@ -28,6 +28,8 @@ const PUSH_H: float = 80.0            # pushbox height — must match visual box
 @export var move_heavy: MoveData      # 2.3 — heavy attack frame data (knockdown)
 @export var move_skill: MoveData      # 3.1 — skill attack frame data
 @export var move_ultimate: MoveData   # 3.1 — ultimate attack frame data
+@export var move_air_fast: MoveData   # air fast attack frame data (jump-in poke)
+@export var move_air_heavy: MoveData  # air heavy attack frame data (spike)
 
 # 3.4 — per-character movement (defaults = the consts above; overridden by CharacterData).
 var _walk_speed: float = WALK_SPEED
@@ -61,6 +63,7 @@ const GETUP_FRAMES: int = 16          # wake-up; invulnerable throughout (2.5)
 const JUGGLE_DECAY: float = 0.8       # 3.5: hitstun multiplier per subsequent airborne hit
 const PUSHBACK_DECAY: float = 0.85    # per-frame pushback falloff (2.4 — blockstrings self-space)
 var health: int = MAX_HEALTH
+var _meter: UltimateMeter = UltimateMeter.new()   # charges on damage; full bar gates the ultimate
 var _max_health: int = MAX_HEALTH     # 6.3: per-character; overridden from CharacterData in _apply_character_data
 var _current_move: MoveData = null    # the move the active attack state is reading
 var _move_has_hit: bool = false       # one hit per attack: cleared when a new attack starts
@@ -69,6 +72,7 @@ var _stun_frames: int = 0             # length of the current HITSTUN/BLOCKSTUN
 var _pushback_vel: float = 0.0        # px/frame applied during a reaction, decaying
 var _projectile_spawned_this_move: bool = false   # 3.2: one projectile per attack
 var _juggle_count: int = 0   # 3.5: airborne hits accumulated this combo; resets on landing
+var _air_attack_used: bool = false   # one air attack per jump; cleared on landing / fresh jump
 var _cinematic_locked: bool = false   # 7.3: UltimateCinematic owns this fighter while set
 signal projectile_requested(data: ProjectileData, origin: Vector2, facing: int)
 
@@ -90,9 +94,12 @@ func _ready() -> void:
 	health = _max_health   # 6.3: the field initializer ran before stats loaded; seed from the real max
 	_box.color = box_color
 	# Validate frame data on load (conventions: validate with assert/push_error).
-	for m in [move_fast, move_heavy, move_skill, move_ultimate]:
+	for m in [move_fast, move_heavy, move_skill, move_ultimate, move_air_fast, move_air_heavy]:
 		if m != null:
 			m.validate()
+	for m in [move_air_fast, move_air_heavy]:
+		if m != null and (m.is_grab or m.is_counter):
+			push_error("air move '%s': grabs/counters are ground-only" % m.move_name)
 	# Tell Godot the scene-file position is the true starting point — prevents the
 	# interpolator from visually sliding in from the origin on the first frame.
 	reset_physics_interpolation()
@@ -116,6 +123,8 @@ func _apply_character_data() -> void:
 	if character_data.move_heavy != null: move_heavy = character_data.move_heavy
 	if character_data.move_skill != null: move_skill = character_data.move_skill
 	if character_data.move_ultimate != null: move_ultimate = character_data.move_ultimate
+	if character_data.move_air_fast != null: move_air_fast = character_data.move_air_fast
+	if character_data.move_air_heavy != null: move_air_heavy = character_data.move_air_heavy
 	_walk_speed = character_data.walk_speed
 	_walk_b_speed = character_data.walk_b_speed
 	_jump_velocity = character_data.jump_velocity
@@ -185,6 +194,11 @@ func _resolve_busy_exits(buf: InputBuffer) -> void:
 					_fsm.request(CharacterStateMachine.State.IDLE)
 			elif _current_move.in_cancel_window(_fsm.frame_in_state):
 				_try_cancel_input(buf)
+		CharacterStateMachine.State.AIR_FAST_ATTACK, CharacterStateMachine.State.AIR_HEAVY_ATTACK:
+			# Finished while still airborne → neutral fall. Landing mid-move is the
+			# _apply_movement floor check (→ JUMP_LAND). No cancels in air (v1).
+			if _current_move == null or _fsm.frame_in_state >= _current_move.total():
+				_fsm.request(CharacterStateMachine.State.JUMP_AIR)
 		CharacterStateMachine.State.GRAB_ATTEMPT:
 			# 6.4 — whiffed grab recovers to IDLE. A CONNECT is resolved externally
 			# (ThrowSequencer moves us to THROW_RELEASE before this fires). GRABBED
@@ -224,8 +238,22 @@ func _process_input(buf: InputBuffer) -> void:
 	if _bwd_tap_timer < 999:
 		_bwd_tap_timer += 1
 
-	# Air control: steer horizontal velocity while airborne without changing FSM state.
+	# Airborne: air attacks (one per jump, heavy > fast) then air control.
+	# During an air attack the fighter is committed — momentum keeps, no steering.
 	if CharacterStateMachine.is_airborne(_fsm.state):
+		if CharacterStateMachine.is_attacking(_fsm.state):
+			return
+		if not _air_attack_used:
+			if move_air_heavy != null and buf.pressed_within(InputBuffer.HEAVY, ATTACK_BUFFER) \
+					and _fsm.request(CharacterStateMachine.State.AIR_HEAVY_ATTACK):
+				_arm(move_air_heavy)
+				_air_attack_used = true
+				return
+			if move_air_fast != null and buf.pressed_within(InputBuffer.FAST, ATTACK_BUFFER) \
+					and _fsm.request(CharacterStateMachine.State.AIR_FAST_ATTACK):
+				_arm(move_air_fast)
+				_air_attack_used = true
+				return
 		if fwd_held:
 			_vel.x = _jump_f_speed * facing
 		elif bwd_held:
@@ -241,9 +269,11 @@ func _process_input(buf: InputBuffer) -> void:
 	# On a successful start, arm the move and clear the one-hit latch.
 	# NOTE: Treating ultimate as a second SKILL slot to avoid changing FSM structure (Phase 3.1 constraint).
 	# 6.4: a slot whose move is_grab enters GRAB_ATTEMPT instead (grapplers put grabs on SKILL/ULT).
-	if move_ultimate != null and buf.pressed_within(InputBuffer.ULTIMATE, ATTACK_BUFFER) \
+	if move_ultimate != null and _meter.is_full() \
+			and buf.pressed_within(InputBuffer.ULTIMATE, ATTACK_BUFFER) \
 			and _fsm.request(_attack_state_for(move_ultimate, CharacterStateMachine.State.SKILL)):
 		_arm(move_ultimate)
+		_meter.consume()   # spent the moment the move starts — blocked/whiffed is still spent
 		return
 	if move_heavy != null and buf.pressed_within(InputBuffer.HEAVY, ATTACK_BUFFER) \
 			and _fsm.request(_attack_state_for(move_heavy, CharacterStateMachine.State.HEAVY_ATTACK)):
@@ -276,7 +306,11 @@ func _process_input(buf: InputBuffer) -> void:
 
 	# Normal ground movement (4-frame action buffer on jump).
 	if buf.pressed_within(InputBuffer.UP, 4):
-		_fsm.request(CharacterStateMachine.State.JUMP_START)
+		# Latch also clears here (not just on landing): a fighter hit out of an air
+		# attack can ride hitstun to the floor and exit to IDLE without ever passing
+		# the landing block — without this a stuck latch would eat the next jump.
+		if _fsm.request(CharacterStateMachine.State.JUMP_START):
+			_air_attack_used = false
 	elif down_held:
 		_fsm.request(CharacterStateMachine.State.CROUCH)
 	elif fwd_held:
@@ -304,8 +338,9 @@ func _apply_movement() -> void:
 			_vel.x = -_backdash_speed * facing
 			_vel.y = 0.0
 		CharacterStateMachine.State.JUMP_AIR, CharacterStateMachine.State.JUMP_F, \
-		CharacterStateMachine.State.JUMP_B:
-			_vel.y += _gravity   # horizontal vel preserved from jump launch
+		CharacterStateMachine.State.JUMP_B, \
+		CharacterStateMachine.State.AIR_FAST_ATTACK, CharacterStateMachine.State.AIR_HEAVY_ATTACK:
+			_vel.y += _gravity   # horizontal vel preserved from jump launch / attack start
 		CharacterStateMachine.State.HITSTUN, CharacterStateMachine.State.BLOCKSTUN:
 			# Pushback (2.4): slide away from the attacker, decaying
 			_vel.x = _pushback_vel
@@ -344,6 +379,7 @@ func _apply_movement() -> void:
 		position.y = _floor_y
 		_vel = Vector2.ZERO
 		_juggle_count = 0
+		_air_attack_used = false
 		_fsm.request(CharacterStateMachine.State.JUMP_LAND)
 	else:
 		position.y = minf(position.y, _floor_y)
@@ -416,8 +452,11 @@ func _arm(move: MoveData) -> void:
 func _try_cancel_input(buf: InputBuffer) -> void:
 	var cur := _fsm.state
 	if move_ultimate != null and not move_ultimate.is_grab and not move_ultimate.is_counter \
+			and _meter.is_full() \
 			and buf.pressed_within(InputBuffer.ULTIMATE, ATTACK_BUFFER):
 		_cancel_into(CharacterStateMachine.State.SKILL, move_ultimate)
+		if _current_move == move_ultimate:   # consume iff the cancel actually armed it
+			_meter.consume()
 		return
 	if move_skill != null and not move_skill.is_grab and not move_skill.is_counter \
 			and cur != CharacterStateMachine.State.SKILL \
@@ -459,6 +498,22 @@ func fsm_state() -> int:
 ## MAX_HEALTH). HUD callers divide the current health by this for the bar fraction.
 func get_max_health() -> int:
 	return _max_health
+
+## Ultimate meter (spec 2026-07-04). Deal-side gain is credited by the SCENES —
+## the call sites that already orchestrate both fighters (main.gd _try_hit,
+## projectile passes, ThrowSequencer). Take-side gain is internal to apply_*.
+func on_damage_dealt(amount: int) -> void:
+	_meter.gain_dealt(amount)
+
+func get_meter_fraction() -> float:
+	return _meter.fraction()
+
+func is_ultimate_ready() -> bool:
+	return _meter.is_full()
+
+## Training mode: pin the bar full each frame.
+func fill_meter() -> void:
+	_meter.fill()
 
 ## Frames elapsed in the current FSM state (0 on the entry frame). Used by training HUD
 ## to compute exact frame advantage at the moment of contact.
@@ -523,6 +578,7 @@ func apply_hitstop(frames: int) -> void:
 ## 3.5: hitstun is scaled by JUGGLE_DECAY^juggle_count when the defender is airborne.
 func apply_hit(move: MoveData, push_dir: float) -> void:
 	health = maxi(0, health - move.damage)
+	_meter.gain_taken(move.damage)
 	_pushback_vel = move.pushback_hit * push_dir
 	if position.y < _floor_y:
 		_stun_frames = maxi(1, int(move.hitstun * pow(JUGGLE_DECAY, _juggle_count)))
@@ -550,6 +606,7 @@ func end_counter() -> void:
 ## Resolve a projectile clean hit (3.2) — same effect as apply_hit, ProjectileData payload.
 func apply_hit_proj(data: ProjectileData, push_dir: float) -> void:
 	health = maxi(0, health - data.damage)
+	_meter.gain_taken(data.damage)
 	_stun_frames = data.hitstun
 	_pushback_vel = data.pushback_hit * push_dir
 	if data.causes_knockdown:
@@ -614,6 +671,7 @@ func release_from_grab() -> void:
 ## the knockdown arc integrates gravity instead of zeroing the pop immediately.
 func apply_throw(move: MoveData) -> void:
 	health = maxi(0, health - move.damage)
+	_meter.gain_taken(move.damage)
 	position.y = minf(position.y, _floor_y - 1.0)
 	_vel = Vector2(0.0, move.throw_launch_y)
 	_pushback_vel = 0.0
@@ -672,7 +730,10 @@ func reset_for_round(spawn_x: float) -> void:
 	_move_has_hit = false
 	_projectile_spawned_this_move = false
 	_juggle_count = 0
+	_air_attack_used = false
 	_cinematic_locked = false
+	# _meter deliberately NOT reset — meter carries across rounds (spec 2026-07-04);
+	# a fresh match starts at 0 because controllers are freshly instantiated.
 	active_hitboxes_local = []
 	_fsm.reset(CharacterStateMachine.State.IDLE)
 	reset_physics_interpolation()

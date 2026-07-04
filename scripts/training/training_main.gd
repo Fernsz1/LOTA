@@ -89,6 +89,7 @@ func _try_hit(attacker: CharacterController, defender: CharacterController) -> v
 		if away == 0.0:
 			away = -float(attacker.facing)
 		attacker.apply_hit(counter, away)
+		defender.on_damage_dealt(counter.damage)   # the counter-holder dealt the retaliation
 		defender.end_counter()
 		return
 	attacker.apply_hitstop(move.hitstop)
@@ -100,6 +101,7 @@ func _try_hit(attacker: CharacterController, defender: CharacterController) -> v
 		defender.apply_block(move, push_dir)
 	else:
 		defender.apply_hit(move, push_dir)
+		attacker.on_damage_dealt(move.damage)
 	# 4.2 — frame advantage: stun - frames remaining for attacker after contact.
 	var fis: int = attacker.get_frame_in_state()
 	var remaining: int = move.total() - fis   # frames attacker still has in this attack
@@ -169,6 +171,7 @@ func _resolve_projectiles() -> void:
 			defender.apply_block_proj(proj.data, push_dir)
 		else:
 			defender.apply_hit_proj(proj.data, push_dir)
+			owner.on_damage_dealt(proj.data.damage)
 		proj.expire()
 	var alive: Array[Projectile] = []
 	for proj in _projectiles:

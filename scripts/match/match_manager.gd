@@ -113,3 +113,5 @@ func _update_bars() -> void:
 	# 6.3/6.4 — per-character max health (Sofia 900, Jacob 1150); bars are fractions of it.
 	_hud.set_health(1, float(_p1.health) / float(_p1.get_max_health()))
 	_hud.set_health(2, float(_p2.health) / float(_p2.get_max_health()))
+	_hud.set_meter(1, _p1.get_meter_fraction())
+	_hud.set_meter(2, _p2.get_meter_fraction())

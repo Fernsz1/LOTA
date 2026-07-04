@@ -44,6 +44,12 @@ var _p2d_regen_timer: int = 0
 
 
 func _physics_process(_delta: float) -> void:
+	# Ultimate meter pinned full in training (spec): always practicable. A used
+	# ultimate refills next frame.
+	_p1.fill_meter()
+	_p1_dummy.fill_meter()
+	_p2_dummy.fill_meter()
+	_p2.fill_meter()
 	if p1_infinite:       _p1.health = _p1.get_max_health()
 	if p1_dummy_infinite: _p1_dummy.health = _p1_dummy.get_max_health()
 	if p2_dummy_infinite: _p2_dummy.health = _p2_dummy.get_max_health()

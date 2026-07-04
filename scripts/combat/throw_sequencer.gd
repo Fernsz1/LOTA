@@ -81,6 +81,7 @@ func step() -> bool:
 		attacker.apply_hitstop(move.hitstop)   # impact freeze on the slam
 		victim.apply_hitstop(move.hitstop)
 		victim.apply_throw(move)               # damage + pop → KNOCKDOWN
+		attacker.on_damage_dealt(move.damage)
 		attacker.end_throw()
 		_done = true
 		return true

@@ -21,8 +21,12 @@ func _initialize() -> void:
 	_check(cd != null, "rainne_data.tres loads")
 	_check(cd.character_name == "Rainne", "character_name is Rainne")
 	_check(cd.walk_speed < 5.0, "walk_speed slower than Jerb (zoner)")
-	for m in [cd.move_fast, cd.move_heavy, cd.move_skill, cd.move_ultimate]:
+	for m in [cd.move_fast, cd.move_heavy, cd.move_skill, cd.move_ultimate,
+			cd.move_air_fast, cd.move_air_heavy]:
 		_check(m != null and m.validate(), "move validates: %s" % (m.move_name if m else "<null>"))
+
+	for m in [cd.move_air_fast, cd.move_air_heavy]:
+		_check(not m.is_grab and not m.is_counter, "%s is a plain air strike" % m.move_name)
 	_check(cd.move_heavy.invuln_startup > 0, "anti-air (HEAVY) has startup invuln")
 	_check(cd.move_skill.projectile != null and cd.move_skill.projectile.validate(), "SKILL has a valid projectile")
 	_check(cd.move_ultimate.projectile != null and cd.move_ultimate.projectile.validate(), "ULTIMATE has a valid projectile")
