@@ -51,12 +51,17 @@ const PD := preload("res://scripts/combat/projectile_data.gd")
 # hitstun/blockstun are unused (like grabs). Raw only — never a cancel target.
 @export var is_counter: bool = false
 
-# 7.3 — cinematic ultimate (Jerb). When true, the MATCH scene intercepts the
-# move on its first frame and plays the scripted UltimateCinematic sequence
-# instead of resolving it as a normal strike. `damage` is the TOTAL dealt
-# across the scripted hits; hitboxes/stun still author the fallback behaviour
+# 7.3 — cinematic ultimate. When true, the MATCH scene intercepts the move on
+# its first frame and plays the scripted UltimateCinematic sequence instead of
+# resolving it as a normal strike. `damage` is the TOTAL dealt across the
+# scripted hits; hitboxes/stun/projectile still author the fallback behaviour
 # (training mode, or a start denied by a live throw, runs the move normally).
 @export var is_cinematic: bool = false
+# Which choreography plays (read only when is_cinematic; specs in
+# .local/gamePlan.md): "rush" — The Four Corners, run-in + four punches (Jerb);
+# "sky_rally" — Sky Rally, an aerial takraw juggle ending in a bicycle-kick
+# spike that crashes the ball into the opponent (Rainne).
+@export_enum("rush", "sky_rally") var cinematic_style: String = "rush"
 
 ## Total length; spans are disjoint so it's a clean sum (feel-reference §3).
 func total() -> int:
