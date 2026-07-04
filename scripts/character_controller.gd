@@ -73,6 +73,7 @@ var _pushback_vel: float = 0.0        # px/frame applied during a reaction, deca
 var _projectile_spawned_this_move: bool = false   # 3.2: one projectile per attack
 var _juggle_count: int = 0   # 3.5: airborne hits accumulated this combo; resets on landing
 var _air_attack_used: bool = false   # one air attack per jump; cleared on landing / fresh jump
+var _cinematic_locked: bool = false   # 7.3: UltimateCinematic owns this fighter while set
 signal projectile_requested(data: ProjectileData, origin: Vector2, facing: int)
 
 var _overlay: Node = null
@@ -138,6 +139,10 @@ func _apply_character_data() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	# Cinematic ultimate (7.3): the UltimateCinematic sequencer owns this fighter —
+	# no input, no movement, no hitstop decay until released.
+	if _cinematic_locked:
+		return
 	# Hitstop (2.4): freeze the whole character — input, movement, and frame_in_state —
 	# so the impact freeze never counts as stun (feel-reference §4/§7).
 	if _hitstop > 0:
@@ -515,9 +520,10 @@ func fill_meter() -> void:
 func get_frame_in_state() -> int:
 	return _fsm.frame_in_state
 
-## Frozen during hitstop — main.gd skips resolution while either fighter is frozen.
+## Frozen during hitstop or a cinematic ultimate — main.gd skips resolution and
+## the MatchManager pauses the round timer while either fighter is frozen.
 func is_frozen() -> bool:
-	return _hitstop > 0
+	return _hitstop > 0 or _cinematic_locked
 
 ## Invulnerable on wake-up (GETUP), when KO'd, while held in a throw (GRABBED, 6.4),
 ## or during a move's startup-invuln window (3.4).
@@ -672,6 +678,42 @@ func apply_throw(move: MoveData) -> void:
 	_fsm.on_launched()   # → KNOCKDOWN
 
 
+# --- Cinematic ultimate API (7.3) — driven by UltimateCinematic (match scene) ---
+
+## Lock this fighter for the cutscene: fully passive (no input, no physics — the
+## sequencer positions both fighters directly) and is_frozen() → the scene pauses
+## hit/throw/projectile resolution and the round timer, exactly like hitstop.
+func begin_cinematic_lock() -> void:
+	_cinematic_locked = true
+	_vel = Vector2.ZERO
+	_pushback_vel = 0.0
+
+## Attacker released at the end of the sequence: drop the armed ultimate (its
+## normal hitboxes must never go live) and return to neutral.
+func end_cinematic_attacker() -> void:
+	_cinematic_locked = false
+	_current_move = null
+	active_hitboxes_local = []
+	_fsm.request(CharacterStateMachine.State.IDLE)
+
+## Scripted damage from one cinematic strike — no stun, no state change (the
+## victim stays locked; their reaction is the sequencer's choreography).
+func apply_cinematic_damage(amount: int) -> void:
+	health = maxi(0, health - amount)
+
+## The finisher: remaining damage + release + vertical pop into KNOCKDOWN
+## (throw-style: lifted 1px so the knockdown arc integrates gravity).
+func apply_cinematic_finisher(amount: int, launch_y: float) -> void:
+	_cinematic_locked = false
+	health = maxi(0, health - amount)
+	position.y = minf(position.y, _floor_y - 1.0)
+	_vel = Vector2(0.0, launch_y)
+	_pushback_vel = 0.0
+	_current_move = null
+	active_hitboxes_local = []
+	_fsm.on_launched()   # → KNOCKDOWN
+
+
 ## Force the KO state on the round loser (2.6).
 func force_ko() -> void:
 	_fsm.on_ko()
@@ -689,6 +731,7 @@ func reset_for_round(spawn_x: float) -> void:
 	_projectile_spawned_this_move = false
 	_juggle_count = 0
 	_air_attack_used = false
+	_cinematic_locked = false
 	# _meter deliberately NOT reset — meter carries across rounds (spec 2026-07-04);
 	# a fresh match starts at 0 because controllers are freshly instantiated.
 	active_hitboxes_local = []

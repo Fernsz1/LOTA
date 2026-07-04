@@ -13,10 +13,13 @@ const RIGHT_WALL_X: float = 1230.0
 @onready var _p2: CharacterController = $P2
 @onready var _background: ColorRect = $Background
 @onready var _floor: ColorRect = $Floor
+@onready var _camera: Camera2D = $Camera
+@onready var _match_hud: CanvasLayer = $MatchHUD
 
 const PROJECTILE_SCENE := preload("res://scenes/projectile.tscn")
 var _projectiles: Array[Projectile] = []
 var _throw: ThrowSequencer = null   # 6.4 — the one live throw (only two fighters)
+var _ultimate: UltimateCinematic = null   # 7.3 — the one live cinematic ultimate
 
 
 func _ready() -> void:
@@ -43,14 +46,33 @@ func _ready() -> void:
 
 func _physics_process(_delta: float) -> void:
 	_update_facing()      # fresh facing first: combat reads back-direction + mirrors boxes
+	_resolve_ultimate_cinematic()   # 7.3 — before combat: the lock freezes everything below
 	_resolve_combat()
 	_resolve_throws()     # 6.4 — after strikes (a same-frame strike beats a grab)
 	_resolve_projectiles()
-	# Pushbox separation pauses during a throw: the hold offset keeps the pair
-	# legal, but the deep-overlap bounce would otherwise shove the victim out
-	# of the attacker's hands on a point-blank connect.
-	if _throw == null:
+	# Pushbox separation pauses during a throw or a cinematic ultimate: the
+	# scripted offsets keep the pair legal, but the deep-overlap bounce would
+	# otherwise shove the fighters out of their choreographed positions.
+	if _throw == null and _ultimate == null:
 		_resolve_pushboxes()
+
+
+# 7.3 — Jerb's cinematic ultimate. Owns both fighters while live: starts on the
+# first frame of a move flagged is_cinematic, steps once per physics frame
+# (unconditionally — the lock itself is what reports frozen), and ends when the
+# camera is home again. Never starts over a connected throw.
+func _resolve_ultimate_cinematic() -> void:
+	if _ultimate != null:
+		if _ultimate.step():
+			_ultimate = null
+		return
+	if _throw != null:
+		return
+	_ultimate = UltimateCinematic.try_start(_p1, _p2, _camera, _match_hud, self,
+			LEFT_WALL_X, RIGHT_WALL_X)
+	if _ultimate == null:
+		_ultimate = UltimateCinematic.try_start(_p2, _p1, _camera, _match_hud, self,
+				LEFT_WALL_X, RIGHT_WALL_X)
 
 
 # Detect and resolve hits this frame (2.4). Runs after both controllers have moved
