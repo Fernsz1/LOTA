@@ -86,6 +86,7 @@ func _try_hit(attacker: CharacterController, defender: CharacterController) -> v
 		if away == 0.0:
 			away = -float(attacker.facing)
 		attacker.apply_hit(counter, away)
+		defender.on_damage_dealt(counter.damage)   # the counter-holder dealt the retaliation
 		defender.end_counter()
 		return
 	attacker.apply_hitstop(move.hitstop)                      # freeze BOTH (feel-reference §4)
@@ -94,9 +95,10 @@ func _try_hit(attacker: CharacterController, defender: CharacterController) -> v
 	if push_dir == 0.0:
 		push_dir = float(attacker.facing)                    # perfectly overlapped → use facing
 	if outcome == HitResolver.Outcome.BLOCK:
-		defender.apply_block(move, push_dir)
+		defender.apply_block(move, push_dir)   # no meter on block (no chip in v1)
 	else:
 		defender.apply_hit(move, push_dir)
+		attacker.on_damage_dealt(move.damage)
 
 
 # 6.4 — grab detection + throw progression. One throw at a time (two fighters:
@@ -149,6 +151,8 @@ func _resolve_projectiles() -> void:
 			defender.apply_block_proj(proj.data, push_dir)
 		else:
 			defender.apply_hit_proj(proj.data, push_dir)
+			var owner_ctl: CharacterController = _p1 if proj.owner_index == 1 else _p2
+			owner_ctl.on_damage_dealt(proj.data.damage)
 		proj.expire()
 	# cull expired
 	var alive: Array[Projectile] = []
