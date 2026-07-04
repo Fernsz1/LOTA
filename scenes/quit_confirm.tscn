@@ -146,10 +146,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -300.0
-offset_top = -260.0
-offset_right = 300.0
-offset_bottom = 260.0
+offset_left = -490.0
+offset_top = -300.0
+offset_right = 490.0
+offset_bottom = 300.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -163,32 +163,67 @@ theme_type_variation = &"PanelTitleLabel"
 text = "CONTROLS"
 horizontal_alignment = 1
 
-[node name="Scroll" type="ScrollContainer" parent="ControlsPanel/Panel/VBox"]
-custom_minimum_size = Vector2(0, 340)
+[node name="Columns" type="HBoxContainer" parent="ControlsPanel/Panel/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_constants/separation = 28
 
-[node name="Rows" type="VBoxContainer" parent="ControlsPanel/Panel/VBox/Scroll"]
+[node name="P1Column" type="VBoxContainer" parent="ControlsPanel/Panel/VBox/Columns"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
+
+[node name="P1Header" type="Label" parent="ControlsPanel/Panel/VBox/Columns/P1Column"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.302, 0.651, 1, 1)
+theme_override_font_sizes/font_size = 24
+text = "PLAYER 1"
+horizontal_alignment = 1
+
+[node name="ColumnSep" type="VSeparator" parent="ControlsPanel/Panel/VBox/Columns"]
+layout_mode = 2
+
+[node name="P2Column" type="VBoxContainer" parent="ControlsPanel/Panel/VBox/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="P2Header" type="Label" parent="ControlsPanel/Panel/VBox/Columns/P2Column"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.353, 0.353, 1)
+theme_override_font_sizes/font_size = 24
+text = "PLAYER 2"
+horizontal_alignment = 1
 
 [node name="HintLabel" type="Label" parent="ControlsPanel/Panel/VBox"]
 layout_mode = 2
 theme_type_variation = &"HintLabel"
-text = "Click Keyboard or Gamepad, then press the new input. Esc cancels."
+text = "Click a binding, then press the new key or button. Esc cancels."
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="ResetButton" type="Button" parent="ControlsPanel/Panel/VBox"]
+[node name="ButtonRow" type="HBoxContainer" parent="ControlsPanel/Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ToggleViewButton" type="Button" parent="ControlsPanel/Panel/VBox/ButtonRow"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "GAMEPAD CONTROLS"
+
+[node name="ResetButton" type="Button" parent="ControlsPanel/Panel/VBox/ButtonRow"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 20
 text = "RESET TO DEFAULT"
 
-[node name="ControlsBackButton" type="Button" parent="ControlsPanel/Panel/VBox"]
+[node name="ControlsBackButton" type="Button" parent="ControlsPanel/Panel/VBox/ButtonRow"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 20
 text = "BACK"
 
@@ -199,5 +234,6 @@ text = "BACK"
 [connection signal="value_changed" from="Panel/VBox/MusicVolumeRow/MusicVolumeSlider" to="." method="_on_music_volume_changed"]
 [connection signal="value_changed" from="Panel/VBox/SFXVolumeRow/SFXVolumeSlider" to="." method="_on_sfx_volume_changed"]
 [connection signal="toggled" from="Panel/VBox/FullscreenRow/FullscreenCheck" to="." method="_on_fullscreen_toggled"]
-[connection signal="pressed" from="ControlsPanel/Panel/VBox/ResetButton" to="ControlsPanel" method="_on_reset_pressed"]
-[connection signal="pressed" from="ControlsPanel/Panel/VBox/ControlsBackButton" to="." method="_on_controls_back_pressed"]
+[connection signal="pressed" from="ControlsPanel/Panel/VBox/ButtonRow/ToggleViewButton" to="ControlsPanel" method="_on_toggle_view_pressed"]
+[connection signal="pressed" from="ControlsPanel/Panel/VBox/ButtonRow/ResetButton" to="ControlsPanel" method="_on_reset_pressed"]
+[connection signal="pressed" from="ControlsPanel/Panel/VBox/ButtonRow/ControlsBackButton" to="." method="_on_controls_back_pressed"]
