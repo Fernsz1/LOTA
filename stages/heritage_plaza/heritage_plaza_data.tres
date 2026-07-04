@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="StageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/stage/stage_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+stage_name = "Heritage Plaza"
+background_color = Color(0.22, 0.14, 0.3, 1)
+floor_color = Color(0.14, 0.1, 0.2, 1)
