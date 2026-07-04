@@ -51,6 +51,13 @@ const PD := preload("res://scripts/combat/projectile_data.gd")
 # hitstun/blockstun are unused (like grabs). Raw only — never a cancel target.
 @export var is_counter: bool = false
 
+# 7.3 — cinematic ultimate (Jerb). When true, the MATCH scene intercepts the
+# move on its first frame and plays the scripted UltimateCinematic sequence
+# instead of resolving it as a normal strike. `damage` is the TOTAL dealt
+# across the scripted hits; hitboxes/stun still author the fallback behaviour
+# (training mode, or a start denied by a live throw, runs the move normally).
+@export var is_cinematic: bool = false
+
 ## Total length; spans are disjoint so it's a clean sum (feel-reference §3).
 func total() -> int:
 	return startup + active + recovery
@@ -121,6 +128,9 @@ func validate() -> bool:
 		ok = false
 	if is_counter and is_grab:
 		push_error("MoveData '%s': a move cannot be both a counter and a grab" % move_name)
+		ok = false
+	if is_cinematic and (is_grab or is_counter):
+		push_error("MoveData '%s': a cinematic ultimate must be a plain strike" % move_name)
 		ok = false
 	if is_counter and projectile != null:
 		push_error("MoveData '%s': a counter cannot spawn a projectile" % move_name)

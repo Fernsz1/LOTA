@@ -32,6 +32,9 @@ offset_right = 1147.0
 offset_bottom = 570.0
 color = Color(0.25, 0.25, 0.25, 1)
 
+[node name="Camera" type="Camera2D" parent="."]
+position = Vector2(640, 360)
+
 [node name="P1" parent="." unique_id=841665642 instance=ExtResource("3_charbox")]
 position = Vector2(400, 560)
 box_color = Color(0.2, 0.5, 0.9, 1)
