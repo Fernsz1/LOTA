@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="MoveData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
+
+[resource]
+script = ExtResource("1_move")
+move_name = "luis_sangga"
+startup = 4
+active = 14
+recovery = 22
+damage = 120
+hitstop = 14
+pushback_hit = 5.0
+causes_knockdown = true
+is_counter = true
