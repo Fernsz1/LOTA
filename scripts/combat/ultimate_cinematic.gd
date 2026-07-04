@@ -29,6 +29,12 @@ extends RefCounted
 ## sinawali is about tempo, not single heavy blows — before one long slow-mo
 ## windup into the cross-strike finish that knocks the opponent away.
 ##
+## "blitz" (Sofia: "Sikaran Barrage", invulnerable lunging rushdown finisher):
+## the fastest approach in the game — a burst lunge into range, then a kick
+## barrage where she DARTS THROUGH the opponent between hits, striking from
+## alternating sides (mobility is her whole identity), before a slow-mo
+## spinning biakid sends them flying into knockdown.
+##
 ## Shared frame: on the first frame of a move flagged is_cinematic, both
 ## fighters are locked (is_frozen() → hits, throws, projectiles and the round
 ## timer all pause), the HUD is hidden, letterbox bars slide in and the camera
@@ -115,17 +121,29 @@ const FINISH_WINDUP_FRAMES: int = 32 # the one long slow-mo beat before the fini
 const STICK_COLOR := Color(0.82, 0.62, 0.35, 1.0)   # rattan
 const SLASH_COLOR := Color(1.0, 0.95, 0.8, 0.9)     # strike streak on the victim
 
+# --- "blitz" choreography ---
+const BLITZ_SPEED: float = 16.0      # the fastest approach in the game
+const BLITZ_CAP: int = 90            # safety: never lunge longer than this
+const BLITZ_GAP: float = 56.0        # kick range: she strikes from here
+const DART_FRAMES: int = 4           # she crosses THROUGH the opponent between kicks
+const B_KICKS: int = 5
+const B_KICK_WINDUP: int = 11        # snappy — her rhythm is speed, not weight
+const B_KICK_NUDGE: float = 5.0      # victim knocked back and forth between sides
+const B_FINISH_WINDUP: int = 30      # the slow-mo beat: she chambers the biakid spin
+
 # Damage split across the pre-finisher hits (fractions of move.damage); the
 # finisher takes the remainder so the total always equals the authored damage.
 # Sky Rally and Earthbreaker are single blows: everything on the finisher.
 const RUSH_FRACTIONS: Array[float] = [0.15, 0.2, 0.25]
 const WEAVE_FRACTIONS: Array[float] = [0.08, 0.08, 0.08, 0.08, 0.08, 0.08]
+const BLITZ_FRACTIONS: Array[float] = [0.08, 0.08, 0.08, 0.08, 0.08]
 const FINISHER_ONLY: Array[float] = []
 
 enum Phase { ZOOM_IN, RUN, WINDUP, THRUST, HOLD, RECOVER, LAUNCH, ZOOM_OUT,
 	RALLY_WINDUP, RALLY_STRIKE, SPIKE_FLIGHT, BLAST,
 	LUNGE, CLINCH, LIFT, APEX, SLAM, IMPACT,
-	ADVANCE, WEAVE, FINISH_WINDUP }
+	ADVANCE, WEAVE, FINISH_WINDUP,
+	BLITZ, DART, B_KICK, B_FINISH }
 
 var attacker: CharacterController
 var victim: CharacterController
@@ -166,6 +184,8 @@ var _stick_a: ColorRect = null      # weave: Luis's twin rattan sticks
 var _stick_b: ColorRect = null
 var _slash: ColorRect = null        # weave: strike streak flashed on the victim
 var _weave_ph: float = 0.0          # weave: continuous stick-weaving clock
+var _dart_from_x: float = 0.0       # blitz: side-switch dash endpoints
+var _dart_to_x: float = 0.0
 
 
 ## Detect + begin a cinematic ultimate this frame. Returns a live sequencer, or
@@ -248,6 +268,14 @@ func step() -> bool:
 			_step_weave(dir)
 		Phase.FINISH_WINDUP:
 			_step_finish_windup(dir)
+		Phase.BLITZ:
+			_step_blitz(dir)
+		Phase.DART:
+			_step_dart()
+		Phase.B_KICK:
+			_step_b_kick(dir)
+		Phase.B_FINISH:
+			_step_b_finish(dir)
 		Phase.LAUNCH:
 			_step_launch(dir)
 		Phase.ZOOM_OUT:
@@ -282,6 +310,8 @@ func _step_zoom_in() -> void:
 				_enter(Phase.LUNGE)
 			"weave":
 				_enter(Phase.ADVANCE)
+			"blitz":
+				_enter(Phase.BLITZ)
 			_:
 				_enter(Phase.RUN)
 
@@ -614,6 +644,79 @@ func _show_slash(tilt: int) -> void:
 	_slash.rotation = 0.6 * tilt
 
 
+# --- "blitz" phases ---
+
+func _step_blitz(dir: float) -> void:
+	# Phase 1 — the invulnerable burst lunge (everything else is frozen, so the
+	# invuln is implicit): the fastest gap-close in the game.
+	var gap: float = absf(victim.position.x - attacker.position.x)
+	if gap > BLITZ_GAP and _t <= BLITZ_CAP:
+		attacker.position.x += minf(BLITZ_SPEED, gap - BLITZ_GAP) * dir
+		_shake = maxf(_shake, 1.5)
+		_follow(Vector2(attacker.position.x, FOCUS_Y), 0.35, FOCUS_ZOOM)
+	else:
+		_atk_base_x = _clamp_stage_x(victim.position.x - BLITZ_GAP * dir)
+		attacker.position.x = _atk_base_x
+		_flash.color.a = 0.25
+		_begin_dart()
+
+
+## Set up the side-switch dash: she crosses to the opponent's other side. If
+## the wall leaves no room over there, she stays on this side instead.
+func _begin_dart() -> void:
+	var side: float = signf(attacker.position.x - victim.position.x)
+	if side == 0.0:
+		side = -float(attacker.facing)
+	_dart_from_x = attacker.position.x
+	_dart_to_x = _clamp_stage_x(victim.position.x - side * BLITZ_GAP)
+	if absf(_dart_to_x - victim.position.x) < 40.0:
+		_dart_to_x = _clamp_stage_x(victim.position.x + side * BLITZ_GAP)
+	_enter(Phase.DART)
+
+
+func _step_dart() -> void:
+	# The cross-through: facing flips automatically (the scene re-derives it
+	# from positions every frame), so the mirror comes for free.
+	var t: float = _t / float(DART_FRAMES)
+	attacker.position.x = lerpf(_dart_from_x, _dart_to_x, t)
+	_follow(Vector2(victim.position.x, FOCUS_Y), 0.3, 2.1)
+	if _t >= DART_FRAMES:
+		_atk_base_x = _dart_to_x
+		_enter(Phase.B_KICK if _hit < B_KICKS else Phase.B_FINISH)
+
+
+func _step_b_kick(dir: float) -> void:
+	# Phase 2 — one snappy kick per side: short chamber, then the hit. No heavy
+	# thrust phase; her rhythm is speed.
+	var e: float = _ease(_t / float(B_KICK_WINDUP))
+	attacker.position.x = _atk_base_x - 6.0 * e * dir
+	_follow(Vector2(victim.position.x, FOCUS_Y), 0.25, 2.1)
+	if _t >= B_KICK_WINDUP:
+		attacker.position.x = _atk_base_x + 10.0 * dir
+		victim.apply_cinematic_damage(_hit_damages[_hit])
+		victim.position.x = _clamp_stage_x(victim.position.x + B_KICK_NUDGE * dir)
+		_flash.color.a = 0.3
+		_shake = 3.5
+		_hit += 1
+		_begin_dart()
+
+
+func _step_b_finish(dir: float) -> void:
+	# Phase 3 — the biakid: she chambers in slow-mo, spinning through a full
+	# rotation, and the reverse kick sends them flying (heavy knockback).
+	var e: float = _ease(_t / float(B_FINISH_WINDUP))
+	attacker.position.x = _atk_base_x - 8.0 * e * dir
+	_set_box_spin(TAU * e)
+	_follow(Vector2(_mid_x(), FOCUS_Y), 0.25, lerpf(2.1, FINAL_ZOOM, e))
+	if _t >= B_FINISH_WINDUP:
+		_set_box_spin(0.0)
+		attacker.position.x = _atk_base_x + 14.0 * dir
+		_flash.color.a = 0.9
+		_shake = 12.0
+		_launch_vel = LAUNCH_SPEED   # spec: heavy knockback, ending it on her terms
+		_enter(Phase.LAUNCH)
+
+
 # --- Internals ---
 
 func _begin(move: MoveData, fx_parent: Node) -> void:
@@ -627,11 +730,14 @@ func _begin(move: MoveData, fx_parent: Node) -> void:
 		fractions = RUSH_FRACTIONS
 	elif _style == "weave":
 		fractions = WEAVE_FRACTIONS
+	elif _style == "blitz":
+		fractions = BLITZ_FRACTIONS
 	_split_damage(move.damage, fractions)
 	_build_fx(fx_parent)
-	if _style != "rush":
+	if _style == "sky_rally" or _style == "slam" or _style == "weave":
 		_build_world_fx(fx_parent)
-	if _style == "sky_rally":
+	if _style == "sky_rally" or _style == "blitz":
+		# Rainne spins for kicks 3-4; Sofia for the biakid finish.
 		_atk_box = attacker.get_node_or_null("Box")
 		if _atk_box != null:
 			_atk_box.pivot_offset = _atk_box.size * 0.5   # spin about the body centre

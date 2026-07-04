@@ -64,8 +64,10 @@ const PD := preload("res://scripts/combat/projectile_data.gd")
 # Earthbreaker, an invulnerable lunge into an overhead lift and a
 # ground-shaking slam (Jacob — his ultimate is a grab, which is allowed here);
 # "weave" — Sinawali, an advancing double-stick flurry with an accelerating
-# rhythm and a knockdown cross-strike finish (Luis).
-@export_enum("rush", "sky_rally", "slam", "weave") var cinematic_style: String = "rush"
+# rhythm and a knockdown cross-strike finish (Luis); "blitz" — Sikaran
+# Barrage, a burst lunge into a kick barrage darting through the opponent
+# between hits, spun into a biakid finish (Sofia).
+@export_enum("rush", "sky_rally", "slam", "weave", "blitz") var cinematic_style: String = "rush"
 
 ## Total length; spans are disjoint so it's a clean sum (feel-reference §3).
 func total() -> int:

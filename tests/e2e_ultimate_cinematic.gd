@@ -1,10 +1,10 @@
 ﻿extends Node
 ## 7.3 — Headless end-to-end run of ALL cinematic ultimates. Boots the real
 ## match scene (P1 Jerb "rush", P2 Rainne "sky_rally", then P1 is swapped to
-## Jacob for "slam" and Luis for "weave"), presses each player's ULTIMATE via
-## the InputManager override hook, and asserts each sequence locks both
-## fighters, hides the HUD, deals the authored total damage, knocks the victim
-## down, and restores the camera/HUD.
+## Jacob for "slam", Luis for "weave", and Sofia for "blitz"), presses each
+## player's ULTIMATE via the InputManager override hook, and asserts each
+## sequence locks both fighters, hides the HUD, deals the authored total
+## damage, knocks the victim down, and restores the camera/HUD.
 ## Run: godot --headless --path . res://tests/e2e_ultimate_cinematic.tscn
 ## (Unlike the tests/*.gd SceneTree scripts, this needs the autoloads, so it
 ## runs as a scene inside the normal game boot.)
@@ -155,8 +155,39 @@ func _physics_process(_delta: float) -> void:
 					or weave_vic == CharacterStateMachine.State.GETUP,
 					"weave: victim went through knockdown (state now %s)"
 					% CharacterStateMachine.State.keys()[weave_vic])
+
+		# --- P1 swapped to Sofia ("blitz"): the side-switching kick barrage ---
+		3050:
+			var sd: CharacterData = load("res://characters/sofia/sofia_data.tres")
+			_p1.set_character(sd, sd.color)
+			_p2_start_health = _p2.health
+		3060:
+			InputManager.set_override(1, InputBuffer.ULTIMATE)
+		3064:
+			InputManager.set_override(1, 0)
+		3130:
+			_check(_p1.is_frozen() and _p2.is_frozen(), "blitz: both fighters locked")
+			_check(not _hud.visible, "blitz: HUD hidden")
+		3800:
+			var ult5: MoveData = _p1.move_ultimate
+			_check(ult5.cinematic_style == "blitz", "P1 ultimate is Sofia's blitz")
+			_check(_p2.health == _p2_start_health - ult5.damage,
+					"blitz: victim took exactly the authored total (%d): %d -> %d"
+					% [ult5.damage, _p2_start_health, _p2.health])
+			_check(not _p1.is_frozen() and not _p2.is_frozen(), "blitz: both fighters released")
+			_check(_hud.visible, "blitz: HUD restored")
+			_check(_camera.position.is_equal_approx(Vector2(640, 360))
+					and _camera.zoom.is_equal_approx(Vector2.ONE), "blitz: camera home again")
+			var blitz_vic: int = _p2.fsm_state()
+			_check(blitz_vic == CharacterStateMachine.State.IDLE
+					or blitz_vic == CharacterStateMachine.State.KNOCKDOWN
+					or blitz_vic == CharacterStateMachine.State.GETUP,
+					"blitz: victim went through knockdown (state now %s)"
+					% CharacterStateMachine.State.keys()[blitz_vic])
+			var p1_box: ColorRect = _p1.get_node("Box")
+			_check(is_zero_approx(p1_box.rotation), "blitz: attacker box rotation restored")
 			print("\n%d checks, %d failures" % [_checks, _failures])
 			get_tree().quit(1 if _failures > 0 else 0)
-		3400:
+		4200:
 			printerr("FAIL: e2e timed out")
 			get_tree().quit(2)

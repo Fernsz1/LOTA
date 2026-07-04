@@ -2,6 +2,10 @@
 
 [ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
 
+; Sikaran Barrage (gamePlan.md): invulnerable lunging rushdown finisher.
+; Played as a "blitz" cutscene in versus (7.3); damage is the cinematic TOTAL
+; across the scripted kicks. The strike itself (with its invuln startup and
+; forward momentum) is the non-cinematic fallback (training mode).
 [resource]
 script = ExtResource("1_move")
 move_name = "sofia_ultimate"
@@ -18,3 +22,5 @@ pushback_block = 9.0
 causes_knockdown = true
 invuln_startup = 12
 move_velocity = 13.0
+is_cinematic = true
+cinematic_style = "blitz"
