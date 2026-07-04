@@ -98,12 +98,27 @@ def _dissolve(rings):
     remaining = set(survivors)
     while remaining:
         start, nxt = next(iter(remaining))
+        ring_keys = [start]
         ring = [coord[start]]
         cur, prev_edge = nxt, (start, nxt)
         remaining.discard(prev_edge)
         guard = 0
         while cur != start and guard < 100000:
-            ring.append(coord[cur])
+            if cur in ring_keys:
+                # `cur` has out-degree > 1: two survivor loops touch at this
+                # single vertex (e.g. two islands/provinces meeting at a
+                # point). Split off everything traced since the earlier
+                # visit to `cur` as its own closed, simple ring, then keep
+                # tracing the outer ring from the truncated prefix so no
+                # ring revisits a non-closing vertex.
+                split_idx = ring_keys.index(cur)
+                sub_ring = ring[split_idx:] + [coord[cur]]
+                out_rings.append(sub_ring)
+                ring_keys = ring_keys[:split_idx + 1]
+                ring = ring[:split_idx + 1]
+            else:
+                ring_keys.append(cur)
+                ring.append(coord[cur])
             outs = [b for b in adj.get(cur, []) if (cur, b) in remaining]
             if not outs:
                 break
