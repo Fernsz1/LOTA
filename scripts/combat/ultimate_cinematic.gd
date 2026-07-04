@@ -23,6 +23,12 @@ extends RefCounted
 ## weight, deliberately no Sett-style carry: no free corner position on top of
 ## the round-ending damage).
 ##
+## "weave" (Luis: "Sinawali", advancing cinematic finisher): twin rattan
+## sticks weave in front of him as he steps into range (the advance his slower
+## walk can't make), then a six-strike flurry lands on an ACCELERATING rhythm —
+## sinawali is about tempo, not single heavy blows — before one long slow-mo
+## windup into the cross-strike finish that knocks the opponent away.
+##
 ## Shared frame: on the first frame of a move flagged is_cinematic, both
 ## fighters are locked (is_frozen() → hits, throws, projectiles and the round
 ## timer all pause), the HUD is hidden, letterbox bars slide in and the camera
@@ -97,15 +103,29 @@ const SLAM_BOUNCE: float = 3.0       # they barely slide — piledriven in place
 const SHOCKWAVE_W: float = 340.0     # ground shockwave full width
 const SHOCKWAVE_COLOR := Color(0.85, 0.75, 0.55, 0.9)   # dust off the floor
 
+# --- "weave" choreography ---
+const ADVANCE_SPEED: float = 7.0     # measured step-in — momentum, not a sprint
+const ADVANCE_CAP: int = 150         # safety: never advance longer than this
+const WEAVE_GAP: float = 64.0        # stick range: he strikes from here
+const WEAVE_HITS: int = 6
+const WEAVE_BEAT_START: int = 14     # first strike windup; the rhythm accelerates...
+const WEAVE_BEAT_MIN: int = 9        # ...down to this
+const WEAVE_NUDGE: float = 5.0       # victim shoved back per weave strike
+const FINISH_WINDUP_FRAMES: int = 32 # the one long slow-mo beat before the finish
+const STICK_COLOR := Color(0.82, 0.62, 0.35, 1.0)   # rattan
+const SLASH_COLOR := Color(1.0, 0.95, 0.8, 0.9)     # strike streak on the victim
+
 # Damage split across the pre-finisher hits (fractions of move.damage); the
 # finisher takes the remainder so the total always equals the authored damage.
 # Sky Rally and Earthbreaker are single blows: everything on the finisher.
 const RUSH_FRACTIONS: Array[float] = [0.15, 0.2, 0.25]
+const WEAVE_FRACTIONS: Array[float] = [0.08, 0.08, 0.08, 0.08, 0.08, 0.08]
 const FINISHER_ONLY: Array[float] = []
 
 enum Phase { ZOOM_IN, RUN, WINDUP, THRUST, HOLD, RECOVER, LAUNCH, ZOOM_OUT,
 	RALLY_WINDUP, RALLY_STRIKE, SPIKE_FLIGHT, BLAST,
-	LUNGE, CLINCH, LIFT, APEX, SLAM, IMPACT }
+	LUNGE, CLINCH, LIFT, APEX, SLAM, IMPACT,
+	ADVANCE, WEAVE, FINISH_WINDUP }
 
 var attacker: CharacterController
 var victim: CharacterController
@@ -135,13 +155,17 @@ var _zoom_out_from_zoom: float = 1.0
 var _launch_vel: float = 0.0
 var _done: bool = false
 
-# world-space fx + fighter-box spins (sky_rally + slam)
+# world-space fx + fighter-box spins (sky_rally + slam + weave)
 var _world_fx: Node2D = null
 var _ball: ColorRect = null         # sky_rally: takraw ball/blast; slam: shockwave
 var _ball_pos: Vector2 = Vector2.ZERO
 var _ball_from: Vector2 = Vector2.ZERO   # where the last touch left it (sag base)
 var _atk_box: ColorRect = null      # the attacker's visual Box, spun for kicks 3/4
 var _vic_box: ColorRect = null      # the victim's visual Box, inverted during the lift
+var _stick_a: ColorRect = null      # weave: Luis's twin rattan sticks
+var _stick_b: ColorRect = null
+var _slash: ColorRect = null        # weave: strike streak flashed on the victim
+var _weave_ph: float = 0.0          # weave: continuous stick-weaving clock
 
 
 ## Detect + begin a cinematic ultimate this frame. Returns a live sequencer, or
@@ -218,6 +242,12 @@ func step() -> bool:
 			_step_slam(dir)
 		Phase.IMPACT:
 			_step_impact()
+		Phase.ADVANCE:
+			_step_advance(dir)
+		Phase.WEAVE:
+			_step_weave(dir)
+		Phase.FINISH_WINDUP:
+			_step_finish_windup(dir)
 		Phase.LAUNCH:
 			_step_launch(dir)
 		Phase.ZOOM_OUT:
@@ -250,6 +280,8 @@ func _step_zoom_in() -> void:
 				_enter(Phase.RALLY_WINDUP)
 			"slam":
 				_enter(Phase.LUNGE)
+			"weave":
+				_enter(Phase.ADVANCE)
 			_:
 				_enter(Phase.RUN)
 
@@ -505,6 +537,83 @@ func _step_impact() -> void:
 		_enter(Phase.LAUNCH)
 
 
+# --- "weave" phases ---
+
+func _step_advance(dir: float) -> void:
+	# Phase 1 — The Advance: the flurry builds as he steps into stick range.
+	_animate_sticks(dir, 0.3)
+	var gap: float = absf(victim.position.x - attacker.position.x)
+	if gap > WEAVE_GAP and _t <= ADVANCE_CAP:
+		attacker.position.x += minf(ADVANCE_SPEED, gap - WEAVE_GAP) * dir
+		_follow(Vector2(attacker.position.x, FOCUS_Y), 0.3, FOCUS_ZOOM)
+	else:
+		_atk_base_x = _clamp_stage_x(victim.position.x - WEAVE_GAP * dir)
+		attacker.position.x = _atk_base_x
+		_enter(Phase.WEAVE)
+
+
+func _step_weave(dir: float) -> void:
+	# Phase 2 — The Weave: strikes land on an accelerating beat; each one is a
+	# small lunge, a diagonal slash streak across the victim, and a nudge back.
+	_animate_sticks(dir, 0.45)
+	attacker.position.x = lerpf(attacker.position.x, _atk_base_x, 0.2)
+	_follow(Vector2(_mid_x(), FOCUS_Y), 0.2, 2.1)
+	var beat: int = maxi(WEAVE_BEAT_START - _hit, WEAVE_BEAT_MIN)
+	if _t >= beat:
+		attacker.position.x = _atk_base_x + 8.0 * dir
+		victim.apply_cinematic_damage(_hit_damages[_hit])
+		victim.position.x = _clamp_stage_x(victim.position.x + WEAVE_NUDGE * dir)
+		_show_slash(1 if _hit % 2 == 0 else -1)
+		_flash.color.a = 0.3
+		_shake = 3.5
+		_hit += 1
+		_atk_base_x = _clamp_stage_x(victim.position.x - WEAVE_GAP * dir)
+		_enter(Phase.WEAVE if _hit < WEAVE_HITS else Phase.FINISH_WINDUP)
+
+
+func _step_finish_windup(dir: float) -> void:
+	# Phase 3 — the one long slow-mo beat: the weave slows, he chambers both
+	# sticks, then the cross-strike sends the opponent flying (heavy pushback).
+	var e: float = _ease(_t / float(FINISH_WINDUP_FRAMES))
+	_animate_sticks(dir, 0.12)
+	attacker.position.x = _atk_base_x - PULLBACK * e * dir
+	_follow(Vector2(_mid_x(), FOCUS_Y), 0.25, lerpf(2.1, FINAL_ZOOM, e))
+	if _t >= FINISH_WINDUP_FRAMES:
+		attacker.position.x = _atk_base_x + 14.0 * dir
+		_show_slash(0)   # the horizontal cross
+		_flash.color.a = 0.9
+		_shake = 12.0
+		_launch_vel = LAUNCH_SPEED   # spec: heavy pushback, ending it on his terms
+		_enter(Phase.LAUNCH)
+
+
+## Continuous double-stick weave: two rods orbiting chest height in front of
+## him, half a cycle apart. `speed` is the tempo — it rises through the flurry.
+func _animate_sticks(dir: float, speed: float) -> void:
+	_weave_ph += speed
+	_stick_pose(_stick_a, dir, _weave_ph)
+	_stick_pose(_stick_b, dir, _weave_ph + PI)
+
+
+func _stick_pose(stick: ColorRect, dir: float, ph: float) -> void:
+	stick.visible = true
+	var centre := Vector2(
+			attacker.position.x + (24.0 + 8.0 * sin(ph)) * dir,
+			attacker.position.y + CHEST_Y + 16.0 * cos(ph))
+	stick.position = centre - stick.size * 0.5
+	stick.rotation = 0.8 * sin(ph + 0.5)
+
+
+## Flash a strike streak across the victim's chest: tilt +1 / -1 alternates the
+## weave diagonals, 0 is the finishing cross. Fades out in _decay_fx.
+func _show_slash(tilt: int) -> void:
+	_slash.visible = true
+	_slash.color = SLASH_COLOR
+	_slash.position = Vector2(victim.position.x, victim.position.y + CHEST_Y) \
+			- _slash.size * 0.5
+	_slash.rotation = 0.6 * tilt
+
+
 # --- Internals ---
 
 func _begin(move: MoveData, fx_parent: Node) -> void:
@@ -513,16 +622,20 @@ func _begin(move: MoveData, fx_parent: Node) -> void:
 	attacker.begin_cinematic_lock()
 	victim.begin_cinematic_lock()
 	_hud.visible = false
-	_split_damage(move.damage,
-			RUSH_FRACTIONS if _style == "rush" else FINISHER_ONLY)
+	var fractions: Array[float] = FINISHER_ONLY
+	if _style == "rush":
+		fractions = RUSH_FRACTIONS
+	elif _style == "weave":
+		fractions = WEAVE_FRACTIONS
+	_split_damage(move.damage, fractions)
 	_build_fx(fx_parent)
-	if _style == "sky_rally":
+	if _style != "rush":
 		_build_world_fx(fx_parent)
+	if _style == "sky_rally":
 		_atk_box = attacker.get_node_or_null("Box")
 		if _atk_box != null:
 			_atk_box.pivot_offset = _atk_box.size * 0.5   # spin about the body centre
 	elif _style == "slam":
-		_build_world_fx(fx_parent)   # the ball prop doubles as the shockwave
 		_vic_box = victim.get_node_or_null("Box")
 		if _vic_box != null:
 			_vic_box.pivot_offset = _vic_box.size * 0.5   # inverted about the body centre
@@ -623,6 +736,10 @@ func _decay_fx() -> void:
 	_shake *= 0.85
 	_camera.offset = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * _shake \
 			if _shake > 0.3 else Vector2.ZERO
+	if _slash != null and _slash.visible:
+		_slash.color.a *= 0.8
+		if _slash.color.a < 0.03:
+			_slash.visible = false
 
 
 func _build_fx(fx_parent: Node) -> void:
@@ -651,14 +768,27 @@ func _build_fx(fx_parent: Node) -> void:
 	fx_parent.add_child(_fx)
 
 
-## World-space prop: one ColorRect that plays the takraw ball / spike blast
-## (sky_rally) or the ground shockwave (slam). Lives in the scene canvas so it
-## inherits the camera zoom like the fighters do.
+## World-space props, per style: the takraw ball / spike blast (sky_rally),
+## the ground shockwave (slam), or the twin sticks + strike slash (weave).
+## They live in the scene canvas so they inherit the camera zoom like the
+## fighters do.
 func _build_world_fx(fx_parent: Node) -> void:
 	_world_fx = Node2D.new()
-	_ball = ColorRect.new()
-	_ball.color = BALL_COLOR
-	_ball.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ball.visible = false
-	_world_fx.add_child(_ball)
+	if _style == "weave":
+		_stick_a = _make_prop(Vector2(36, 5), STICK_COLOR)
+		_stick_b = _make_prop(Vector2(36, 5), STICK_COLOR)
+		_slash = _make_prop(Vector2(72, 6), SLASH_COLOR)
+	else:
+		_ball = _make_prop(Vector2(BALL_SIZE, BALL_SIZE), BALL_COLOR)
 	fx_parent.add_child(_world_fx)
+
+
+func _make_prop(size: Vector2, color: Color) -> ColorRect:
+	var prop := ColorRect.new()
+	prop.color = color
+	prop.size = size
+	prop.pivot_offset = size * 0.5   # rotations read about the prop's centre
+	prop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	prop.visible = false
+	_world_fx.add_child(prop)
+	return prop

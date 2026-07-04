@@ -62,8 +62,10 @@ const PD := preload("res://scripts/combat/projectile_data.gd")
 # "sky_rally" — Sky Rally, an aerial takraw juggle ending in a bicycle-kick
 # spike that crashes the ball into the opponent (Rainne); "slam" —
 # Earthbreaker, an invulnerable lunge into an overhead lift and a
-# ground-shaking slam (Jacob — his ultimate is a grab, which is allowed here).
-@export_enum("rush", "sky_rally", "slam") var cinematic_style: String = "rush"
+# ground-shaking slam (Jacob — his ultimate is a grab, which is allowed here);
+# "weave" — Sinawali, an advancing double-stick flurry with an accelerating
+# rhythm and a knockdown cross-strike finish (Luis).
+@export_enum("rush", "sky_rally", "slam", "weave") var cinematic_style: String = "rush"
 
 ## Total length; spans are disjoint so it's a clean sum (feel-reference §3).
 func total() -> int:

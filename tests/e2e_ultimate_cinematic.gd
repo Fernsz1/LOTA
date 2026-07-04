@@ -1,10 +1,10 @@
 ﻿extends Node
 ## 7.3 — Headless end-to-end run of ALL cinematic ultimates. Boots the real
 ## match scene (P1 Jerb "rush", P2 Rainne "sky_rally", then P1 is swapped to
-## Jacob for "slam"), presses each player's ULTIMATE via the InputManager
-## override hook, and asserts each sequence locks both fighters, hides the HUD,
-## deals the authored total damage, knocks the victim down, and restores the
-## camera/HUD.
+## Jacob for "slam" and Luis for "weave"), presses each player's ULTIMATE via
+## the InputManager override hook, and asserts each sequence locks both
+## fighters, hides the HUD, deals the authored total damage, knocks the victim
+## down, and restores the camera/HUD.
 ## Run: godot --headless --path . res://tests/e2e_ultimate_cinematic.tscn
 ## (Unlike the tests/*.gd SceneTree scripts, this needs the autoloads, so it
 ## runs as a scene inside the normal game boot.)
@@ -126,8 +126,37 @@ func _physics_process(_delta: float) -> void:
 					% CharacterStateMachine.State.keys()[vic_state])
 			var p2_box: ColorRect = _p2.get_node("Box")
 			_check(is_zero_approx(p2_box.rotation), "slam: victim box rotation restored")
+
+		# --- P1 swapped to Luis ("weave"): the advancing stick flurry ---
+		2250:
+			var ld: CharacterData = load("res://characters/luis/luis_data.tres")
+			_p1.set_character(ld, ld.color)
+			_p2_start_health = _p2.health
+		2260:
+			InputManager.set_override(1, InputBuffer.ULTIMATE)
+		2264:
+			InputManager.set_override(1, 0)
+		2330:
+			_check(_p1.is_frozen() and _p2.is_frozen(), "weave: both fighters locked")
+			_check(not _hud.visible, "weave: HUD hidden")
+		3000:
+			var ult4: MoveData = _p1.move_ultimate
+			_check(ult4.cinematic_style == "weave", "P1 ultimate is Luis's weave")
+			_check(_p2.health == _p2_start_health - ult4.damage,
+					"weave: victim took exactly the authored total (%d): %d -> %d"
+					% [ult4.damage, _p2_start_health, _p2.health])
+			_check(not _p1.is_frozen() and not _p2.is_frozen(), "weave: both fighters released")
+			_check(_hud.visible, "weave: HUD restored")
+			_check(_camera.position.is_equal_approx(Vector2(640, 360))
+					and _camera.zoom.is_equal_approx(Vector2.ONE), "weave: camera home again")
+			var weave_vic: int = _p2.fsm_state()
+			_check(weave_vic == CharacterStateMachine.State.IDLE
+					or weave_vic == CharacterStateMachine.State.KNOCKDOWN
+					or weave_vic == CharacterStateMachine.State.GETUP,
+					"weave: victim went through knockdown (state now %s)"
+					% CharacterStateMachine.State.keys()[weave_vic])
 			print("\n%d checks, %d failures" % [_checks, _failures])
 			get_tree().quit(1 if _failures > 0 else 0)
-		2600:
+		3400:
 			printerr("FAIL: e2e timed out")
 			get_tree().quit(2)
