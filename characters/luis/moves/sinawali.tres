@@ -2,6 +2,10 @@
 
 [ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
 
+; Sinawali (gamePlan.md): advancing cinematic finisher — the weaving
+; double-stick flurry. Played as a "weave" cutscene in versus (7.3); damage is
+; the cinematic TOTAL across the scripted strikes. The strike itself (with its
+; forward momentum) is the non-cinematic fallback (training mode).
 [resource]
 script = ExtResource("1_move")
 move_name = "luis_sinawali"
@@ -19,3 +23,5 @@ causes_knockdown = true
 move_velocity = 8.0
 move_velocity_start = 4
 move_velocity_end = 12
+is_cinematic = true
+cinematic_style = "weave"

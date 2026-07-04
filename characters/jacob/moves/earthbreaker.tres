@@ -4,6 +4,9 @@
 
 ; Earthbreaker — super grab. Startup-invulnerable (walks through pokes and
 ; fireballs), untechable, round-ending damage. Long whiff recovery is the price.
+; Played as a "slam" cutscene in versus (7.3; trigger-on-press for now — the
+; connect-gated whiff rule comes later). The grab itself is the non-cinematic
+; fallback (training mode), same 300 damage either way.
 [resource]
 script = ExtResource("1_move")
 move_name = "earthbreaker"
@@ -18,3 +21,5 @@ is_grab = true
 throw_release_frames = 44
 tech_window = 0
 throw_launch_y = -8.5
+is_cinematic = true
+cinematic_style = "slam"

@@ -17,3 +17,4 @@ hitstop = 20
 pushback_hit = 9.0
 pushback_block = 6.0
 causes_knockdown = true
+is_cinematic = true
