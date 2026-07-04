@@ -29,6 +29,7 @@ func _initialize() -> void:
 	_test_frame_counter()
 	_test_convenience_wrappers()
 	_test_grab_states()
+	_test_air_attack_states()
 	print("\n%d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -177,6 +178,46 @@ func _test_grab_states() -> void:
 	sm.request(CSM.State.JUMP_START)
 	sm.request(CSM.State.JUMP_AIR)
 	_check(not sm.request(CSM.State.GRAB_ATTEMPT), "JUMP_AIR -> GRAB_ATTEMPT rejected (grabs are grounded)")
+
+
+func _test_air_attack_states() -> void:
+	# Entry: only from the three airborne jump states.
+	var sm := CSM.new()
+	_check(not sm.request(CSM.State.AIR_FAST_ATTACK), "IDLE -> AIR_FAST_ATTACK rejected")
+	_check(not sm.request(CSM.State.AIR_HEAVY_ATTACK), "IDLE -> AIR_HEAVY_ATTACK rejected")
+	sm.request(CSM.State.JUMP_START)
+	_check(not sm.request(CSM.State.AIR_FAST_ATTACK), "JUMP_START -> AIR_FAST_ATTACK rejected (prejump)")
+	sm.request(CSM.State.JUMP_AIR)
+	_check(sm.request(CSM.State.AIR_FAST_ATTACK), "JUMP_AIR -> AIR_FAST_ATTACK allowed")
+	# Exits: finished airborne -> JUMP_AIR. Structural re-entry is legal — the
+	# one-air-attack-per-jump rule is the CONTROLLER's latch (Task 3), not the FSM's.
+	_check(sm.request(CSM.State.JUMP_AIR), "AIR_FAST_ATTACK -> JUMP_AIR allowed (recovered airborne)")
+	_check(sm.request(CSM.State.AIR_HEAVY_ATTACK), "JUMP_AIR -> AIR_HEAVY_ATTACK allowed")
+	_check(not sm.request(CSM.State.FAST_ATTACK), "AIR_HEAVY_ATTACK -> FAST_ATTACK rejected (no ground attacks in air)")
+	_check(not sm.request(CSM.State.AIR_FAST_ATTACK), "AIR_HEAVY_ATTACK -> AIR_FAST_ATTACK rejected (no air chains)")
+	_check(not sm.request(CSM.State.IDLE), "AIR_HEAVY_ATTACK -> IDLE rejected (must land)")
+	# Landing cancel target.
+	_check(sm.request(CSM.State.JUMP_LAND), "AIR_HEAVY_ATTACK -> JUMP_LAND allowed (landing cancel)")
+	# Forward/back jumps can also attack.
+	var sm2 := CSM.new()
+	sm2.request(CSM.State.JUMP_START)
+	sm2.request(CSM.State.JUMP_F)
+	_check(sm2.request(CSM.State.AIR_HEAVY_ATTACK), "JUMP_F -> AIR_HEAVY_ATTACK allowed")
+	var sm3 := CSM.new()
+	sm3.request(CSM.State.JUMP_START)
+	sm3.request(CSM.State.JUMP_B)
+	_check(sm3.request(CSM.State.AIR_FAST_ATTACK), "JUMP_B -> AIR_FAST_ATTACK allowed")
+	# Reactions still interrupt air attacks.
+	sm3.force(CSM.State.HITSTUN)
+	_check(sm3.state == CSM.State.HITSTUN, "force(HITSTUN) from AIR_FAST_ATTACK works")
+	# Category predicates — these drive gravity, landing, and hitbox resolution.
+	_check(CSM.is_airborne(CSM.State.AIR_FAST_ATTACK), "AIR_FAST_ATTACK is airborne")
+	_check(CSM.is_airborne(CSM.State.AIR_HEAVY_ATTACK), "AIR_HEAVY_ATTACK is airborne")
+	_check(CSM.is_attacking(CSM.State.AIR_FAST_ATTACK), "AIR_FAST_ATTACK is attacking")
+	_check(CSM.is_attacking(CSM.State.AIR_HEAVY_ATTACK), "AIR_HEAVY_ATTACK is attacking")
+	_check(CSM.is_busy(CSM.State.AIR_FAST_ATTACK), "AIR_FAST_ATTACK is busy")
+	_check(not CSM.is_actionable(CSM.State.AIR_FAST_ATTACK), "AIR_FAST_ATTACK not actionable")
+	_check(not CSM.is_grounded(CSM.State.AIR_HEAVY_ATTACK), "AIR_HEAVY_ATTACK not grounded")
 
 
 func _test_convenience_wrappers() -> void:
