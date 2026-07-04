@@ -1,42 +1,8 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/character_select.gd" id="1_csel"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_normal"]
-bg_color = Color(0.13, 0.13, 0.17, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.85, 0.65, 0.15, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_p1_cursor"]
-bg_color = Color(0, 0, 0, 0)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(0.25, 0.75, 1, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_p2_cursor"]
-bg_color = Color(0, 0, 0, 0)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(1, 0.3, 0.3, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
+[ext_resource type="Theme" path="res://art/ui/lota_theme.tres" id="2_theme"]
+[ext_resource type="PackedScene" path="res://scenes/ui/menu_background.tscn" id="3_bg"]
 
 [node name="CharacterSelect" type="Control"]
 layout_mode = 3
@@ -45,16 +11,17 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("2_theme")
 script = ExtResource("1_csel")
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Background" parent="." instance=ExtResource("3_bg")]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.07, 0.08, 0.11, 1)
+glow_strength = 0.6
 
 [node name="Title" type="Label" parent="."]
 layout_mode = 1
@@ -63,8 +30,7 @@ anchor_right = 1.0
 offset_top = 40.0
 offset_bottom = 100.0
 grow_horizontal = 2
-theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
-theme_override_font_sizes/font_size = 44
+theme_type_variation = &"HeaderLabel"
 text = "SELECT YOUR FIGHTER"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -84,12 +50,12 @@ theme_override_constants/separation = 20
 [node name="P1Cursor" type="Panel" parent="."]
 layout_mode = 1
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_p1_cursor")
+theme_type_variation = &"CursorP1"
 
 [node name="P2Cursor" type="Panel" parent="."]
 layout_mode = 1
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_p2_cursor")
+theme_type_variation = &"CursorP2"
 
 [node name="StatusRow" type="HBoxContainer" parent="."]
 layout_mode = 1
@@ -106,13 +72,13 @@ theme_override_constants/separation = 60
 
 [node name="P1Status" type="Label" parent="StatusRow"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.25, 0.75, 1, 1)
+theme_override_colors/font_color = Color(0.302, 0.651, 1, 1)
 theme_override_font_sizes/font_size = 22
 text = "P1: JERB"
 
 [node name="P2Status" type="Label" parent="StatusRow"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
+theme_override_colors/font_color = Color(1, 0.353, 0.353, 1)
 theme_override_font_sizes/font_size = 22
 text = "P2: RAINNE"
 
@@ -126,7 +92,7 @@ offset_top = -50.0
 offset_bottom = -16.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"HintLabel"
 text = "Move: Left/Right     Lock In: Attack Button     Unlock: Heavy Attack Button"
 horizontal_alignment = 1
 
@@ -141,8 +107,7 @@ offset_top = -72.0
 offset_right = 164.0
 offset_bottom = -24.0
 grow_vertical = 0
-theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_type_variation = &"GhostButton"
 text = "BACK"
 
 [connection signal="pressed" from="BackButton" to="." method="_on_back_pressed"]

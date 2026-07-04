@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/player_names.gd" id="1_pnames"]
+[ext_resource type="Theme" path="res://art/ui/lota_theme.tres" id="90_theme"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_normal"]
 bg_color = Color(0.13, 0.13, 0.17, 1)
@@ -33,6 +34,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("90_theme")
 script = ExtResource("1_pnames")
 
 [node name="Background" type="ColorRect" parent="."]

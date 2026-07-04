@@ -1,0 +1,220 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/menu_background.gd" id="1_menubg"]
+[ext_resource type="Texture2D" path="res://art/ui/silhouettes/palm.svg" id="2_palm"]
+[ext_resource type="Texture2D" path="res://art/ui/silhouettes/hut.svg" id="3_hut"]
+
+[sub_resource type="Gradient" id="Gradient_sky"]
+offsets = PackedFloat32Array(0, 0.5, 0.8, 1)
+colors = PackedColorArray(0.106, 0.071, 0.188, 1, 0.227, 0.118, 0.227, 1, 0.706, 0.333, 0.173, 1, 0.91, 0.518, 0.173, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_sky"]
+gradient = SubResource("Gradient_sky")
+width = 32
+height = 512
+fill_from = Vector2(0.5, 0)
+fill_to = Vector2(0.5, 1)
+
+[sub_resource type="Gradient" id="Gradient_sea"]
+offsets = PackedFloat32Array(0, 0.3, 1)
+colors = PackedColorArray(0.353, 0.18, 0.094, 1, 0.165, 0.082, 0.063, 1, 0.043, 0.051, 0.071, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_sea"]
+gradient = SubResource("Gradient_sea")
+width = 32
+height = 256
+fill_from = Vector2(0.5, 0)
+fill_to = Vector2(0.5, 1)
+
+[sub_resource type="Gradient" id="Gradient_glow"]
+offsets = PackedFloat32Array(0, 0.4, 1)
+colors = PackedColorArray(0.949, 0.663, 0.231, 0.55, 0.91, 0.518, 0.173, 0.28, 0.91, 0.518, 0.173, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_glow"]
+gradient = SubResource("Gradient_glow")
+width = 512
+height = 512
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.5, 1)
+
+[sub_resource type="Gradient" id="Gradient_sun_core"]
+offsets = PackedFloat32Array(0, 0.5, 1)
+colors = PackedColorArray(1, 0.93, 0.72, 0.95, 1, 0.75, 0.35, 0.6, 1, 0.75, 0.35, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_sun_core"]
+gradient = SubResource("Gradient_sun_core")
+width = 256
+height = 256
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.5, 1)
+
+[sub_resource type="Gradient" id="Gradient_vignette"]
+offsets = PackedFloat32Array(0, 0.6, 1)
+colors = PackedColorArray(0, 0, 0, 0, 0, 0, 0, 0.12, 0, 0, 0, 0.55)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_vignette"]
+gradient = SubResource("Gradient_vignette")
+width = 512
+height = 512
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0)
+
+[node name="MenuBackground" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_menubg")
+
+[node name="Sky" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 0.7
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_sky")
+expand_mode = 1
+
+[node name="Sea" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.7
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_sea")
+expand_mode = 1
+
+[node name="SunGlow" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.7
+anchor_right = 0.5
+anchor_bottom = 0.7
+offset_left = -460.0
+offset_top = -320.0
+offset_right = 460.0
+offset_bottom = 320.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_glow")
+expand_mode = 1
+
+[node name="SunCore" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.7
+anchor_right = 0.5
+anchor_bottom = 0.7
+offset_left = -80.0
+offset_top = -90.0
+offset_right = 80.0
+offset_bottom = 70.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_sun_core")
+expand_mode = 1
+
+[node name="Islands" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.7
+anchor_right = 1.0
+anchor_bottom = 0.7
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="IslandFar" type="Polygon2D" parent="Islands"]
+color = Color(0.14, 0.09, 0.19, 1)
+polygon = PackedVector2Array(-700, 40, -700, -8, -420, -18, -140, -5, 140, -22, 430, -8, 720, -26, 1010, -10, 1300, -20, 1650, -6, 2100, -14, 3000, -4, 3000, 40)
+
+[node name="IslandNear" type="Polygon2D" parent="Islands"]
+color = Color(0.059, 0.039, 0.078, 1)
+polygon = PackedVector2Array(480, 40, 505, -2, 690, -28, 895, -12, 1105, -32, 1350, -9, 1520, -20, 1720, 2, 1720, 40)
+
+[node name="Hut" type="TextureRect" parent="Islands"]
+layout_mode = 0
+offset_left = 880.0
+offset_top = -76.0
+offset_right = 976.0
+offset_bottom = -4.0
+mouse_filter = 2
+texture = ExtResource("3_hut")
+expand_mode = 1
+stretch_mode = 5
+modulate = Color(0.08, 0.05, 0.12, 1)
+
+[node name="PalmLeft" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = -60.0
+offset_top = -620.0
+offset_right = 320.0
+offset_bottom = 30.0
+grow_vertical = 0
+pivot_offset = Vector2(150, 640)
+mouse_filter = 2
+texture = ExtResource("2_palm")
+expand_mode = 1
+stretch_mode = 5
+modulate = Color(0.043, 0.051, 0.071, 1)
+
+[node name="PalmRight" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -300.0
+offset_top = -520.0
+offset_right = 40.0
+offset_bottom = 20.0
+grow_horizontal = 0
+grow_vertical = 0
+pivot_offset = Vector2(170, 540)
+mouse_filter = 2
+texture = ExtResource("2_palm")
+flip_h = true
+expand_mode = 1
+stretch_mode = 5
+modulate = Color(0.043, 0.051, 0.071, 1)
+
+[node name="ArtSlot" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Vignette" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_vignette")
+expand_mode = 1
