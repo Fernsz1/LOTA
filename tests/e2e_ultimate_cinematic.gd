@@ -39,11 +39,27 @@ func _check(cond: bool, msg: String) -> void:
 		printerr("FAIL: ", msg)
 
 
+## After a cutscene the camera hands back to the dynamic fight camera, which
+## frames both fighters (zoom 1.0..CAM_MAX_ZOOM, view inside the canvas) —
+## it no longer parks at the identity view, so assert the framing instead.
+func _match_framing() -> bool:
+	var z: float = _camera.zoom.x
+	if z < 0.99 or z > 2.2:
+		return false
+	var half_w: float = 640.0 / z
+	var half_h: float = 360.0 / z
+	return _camera.position.x >= half_w - 1.0 \
+			and _camera.position.x <= 1280.0 - half_w + 1.0 \
+			and _camera.position.y >= half_h - 1.0 \
+			and _camera.position.y <= 720.0 - half_h + 1.0
+
+
 func _physics_process(_delta: float) -> void:
 	_frame += 1
 	match _frame:
 		30:
 			_p2_start_health = _p2.health
+			_p1.fill_meter()   # ultimates are meter-gated (spec 2026-07-04)
 			InputManager.set_override(1, InputBuffer.ULTIMATE)
 		34:
 			InputManager.set_override(1, 0)
@@ -60,8 +76,7 @@ func _physics_process(_delta: float) -> void:
 					% [ult.damage, _p2_start_health, _p2.health])
 			_check(not _p1.is_frozen() and not _p2.is_frozen(), "rush: both fighters released")
 			_check(_hud.visible, "rush: HUD restored")
-			_check(_camera.position.is_equal_approx(Vector2(640, 360))
-					and _camera.zoom.is_equal_approx(Vector2.ONE), "rush: camera home again")
+			_check(_match_framing(), "rush: camera back to match framing")
 			var p2_state: int = _p2.fsm_state()
 			_check(p2_state == CharacterStateMachine.State.IDLE
 					or p2_state == CharacterStateMachine.State.KNOCKDOWN
@@ -72,6 +87,7 @@ func _physics_process(_delta: float) -> void:
 		# --- P2 (Rainne, "sky_rally") kicks it off from wherever she stands ---
 		750:
 			_p1_start_health = _p1.health
+			_p2.fill_meter()
 			InputManager.set_override(2, InputBuffer.ULTIMATE)
 		754:
 			InputManager.set_override(2, 0)
@@ -86,8 +102,7 @@ func _physics_process(_delta: float) -> void:
 					% [ult2.damage, _p1_start_health, _p1.health])
 			_check(not _p1.is_frozen() and not _p2.is_frozen(), "sky_rally: both fighters released")
 			_check(_hud.visible, "sky_rally: HUD restored")
-			_check(_camera.position.is_equal_approx(Vector2(640, 360))
-					and _camera.zoom.is_equal_approx(Vector2.ONE), "sky_rally: camera home again")
+			_check(_match_framing(), "sky_rally: camera back to match framing")
 			var p1_state: int = _p1.fsm_state()
 			_check(p1_state == CharacterStateMachine.State.IDLE
 					or p1_state == CharacterStateMachine.State.KNOCKDOWN
@@ -101,6 +116,7 @@ func _physics_process(_delta: float) -> void:
 			_p1.set_character(jd, jd.color)
 			_p2_start_health = _p2.health
 		1510:
+			_p1.fill_meter()
 			InputManager.set_override(1, InputBuffer.ULTIMATE)
 		1514:
 			InputManager.set_override(1, 0)
@@ -116,8 +132,7 @@ func _physics_process(_delta: float) -> void:
 					% [ult3.damage, _p2_start_health, _p2.health])
 			_check(not _p1.is_frozen() and not _p2.is_frozen(), "slam: both fighters released")
 			_check(_hud.visible, "slam: HUD restored")
-			_check(_camera.position.is_equal_approx(Vector2(640, 360))
-					and _camera.zoom.is_equal_approx(Vector2.ONE), "slam: camera home again")
+			_check(_match_framing(), "slam: camera back to match framing")
 			var vic_state: int = _p2.fsm_state()
 			_check(vic_state == CharacterStateMachine.State.IDLE
 					or vic_state == CharacterStateMachine.State.KNOCKDOWN
@@ -133,6 +148,7 @@ func _physics_process(_delta: float) -> void:
 			_p1.set_character(ld, ld.color)
 			_p2_start_health = _p2.health
 		2260:
+			_p1.fill_meter()
 			InputManager.set_override(1, InputBuffer.ULTIMATE)
 		2264:
 			InputManager.set_override(1, 0)
@@ -147,8 +163,7 @@ func _physics_process(_delta: float) -> void:
 					% [ult4.damage, _p2_start_health, _p2.health])
 			_check(not _p1.is_frozen() and not _p2.is_frozen(), "weave: both fighters released")
 			_check(_hud.visible, "weave: HUD restored")
-			_check(_camera.position.is_equal_approx(Vector2(640, 360))
-					and _camera.zoom.is_equal_approx(Vector2.ONE), "weave: camera home again")
+			_check(_match_framing(), "weave: camera back to match framing")
 			var weave_vic: int = _p2.fsm_state()
 			_check(weave_vic == CharacterStateMachine.State.IDLE
 					or weave_vic == CharacterStateMachine.State.KNOCKDOWN
@@ -162,6 +177,7 @@ func _physics_process(_delta: float) -> void:
 			_p1.set_character(sd, sd.color)
 			_p2_start_health = _p2.health
 		3060:
+			_p1.fill_meter()
 			InputManager.set_override(1, InputBuffer.ULTIMATE)
 		3064:
 			InputManager.set_override(1, 0)
@@ -176,8 +192,7 @@ func _physics_process(_delta: float) -> void:
 					% [ult5.damage, _p2_start_health, _p2.health])
 			_check(not _p1.is_frozen() and not _p2.is_frozen(), "blitz: both fighters released")
 			_check(_hud.visible, "blitz: HUD restored")
-			_check(_camera.position.is_equal_approx(Vector2(640, 360))
-					and _camera.zoom.is_equal_approx(Vector2.ONE), "blitz: camera home again")
+			_check(_match_framing(), "blitz: camera back to match framing")
 			var blitz_vic: int = _p2.fsm_state()
 			_check(blitz_vic == CharacterStateMachine.State.IDLE
 					or blitz_vic == CharacterStateMachine.State.KNOCKDOWN
