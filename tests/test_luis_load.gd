@@ -27,8 +27,12 @@ func _initialize() -> void:
 	_check(cd.max_health == 1000, "baseline 1000 health")
 	_check(cd.walk_speed > 4.2 and cd.walk_speed < 5.0, "mid walk speed (between Rainne and Jerb)")
 	_check(cd.backdash_speed > 7.0 and cd.backdash_frames < 20, "better-than-default backdash (bait tool)")
-	for m in [cd.move_fast, cd.move_heavy, cd.move_skill, cd.move_ultimate]:
+	for m in [cd.move_fast, cd.move_heavy, cd.move_skill, cd.move_ultimate,
+			cd.move_air_fast, cd.move_air_heavy]:
 		_check(m != null and m.validate(), "move validates: %s" % (m.move_name if m else "<null>"))
+
+	for m in [cd.move_air_fast, cd.move_air_heavy]:
+		_check(not m.is_grab and not m.is_counter, "%s is a plain air strike" % m.move_name)
 	_check(not cd.move_fast.is_counter and not cd.move_fast.is_grab, "FAST is a strike")
 	_check(cd.move_fast.cancel_window_start >= 0, "FAST is cancelable (footsies confirm)")
 	_check(cd.move_heavy.causes_knockdown, "HEAVY knocks down")

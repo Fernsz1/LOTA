@@ -30,8 +30,12 @@ func _initialize() -> void:
 	_check(cd.backdash_speed == 8.5 and cd.backdash_frames == 16, "backdash 8.5/16")
 
 	# All four moves load and validate.
-	for m in [cd.move_fast, cd.move_heavy, cd.move_skill, cd.move_ultimate]:
+	for m in [cd.move_fast, cd.move_heavy, cd.move_skill, cd.move_ultimate,
+			cd.move_air_fast, cd.move_air_heavy]:
 		_check(m != null and m.validate(), "move validates: %s" % (m.move_name if m else "<null>"))
+
+	for m in [cd.move_air_fast, cd.move_air_heavy]:
+		_check(not m.is_grab and not m.is_counter, "%s is a plain air strike" % m.move_name)
 
 	# Move-specific invariants.
 	_check(cd.move_ultimate.invuln_startup == 12, "ultimate invuln_startup 12 (layered reversal)")

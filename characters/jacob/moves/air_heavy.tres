@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="MoveData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
+
+[resource]
+script = ExtResource("1_move")
+move_name = "jacob_air_heavy"
+startup = 14
+active = 6
+recovery = 16
+hitboxes = Array[Rect2]([Rect2(0, -72, 52, 48)])
+damage = 115
+hitstun = 26
+blockstun = 15
+hitstop = 9
+pushback_hit = 4.5
+pushback_block = 3.5
+causes_knockdown = true
