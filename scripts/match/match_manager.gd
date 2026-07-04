@@ -24,10 +24,25 @@ func _ready() -> void:
 	_p1 = get_node(p1_path)
 	_p2 = get_node(p2_path)
 	_hud = get_node(hud_path)
-	push_fighter(_hud, 1, _p1.character_data)
-	push_fighter(_hud, 2, _p2.character_data)
+	# 7.4 fix: do NOT push the fighter plate here. P1/P2/MatchManager are
+	# siblings under Main, so sibling _ready() order follows scene-tree child
+	# order — this runs BEFORE Main's own _ready(), which is where
+	# MatchSelection's picks get applied via _p1.set_character()/_p2.set_character().
+	# Reading _p1.character_data at this point would still be the .tscn's
+	# baked placeholder (whatever main.tscn happens to author for P1/P2), not
+	# the character actually picked at character-select — the HUD name (and
+	# now the health-bar color) would silently show the wrong fighter every
+	# match. Main calls refresh_fighters() itself, once it's guaranteed the
+	# override has already happened.
 	_state.start_match()
 	_reset_round()
+
+## Pushes P1/P2's CURRENT character_data onto the HUD (name + signature
+## color). Called by main.gd's _ready(), AFTER it applies any MatchSelection
+## override — see the _ready() comment for why this can't just run here.
+func refresh_fighters() -> void:
+	push_fighter(_hud, 1, _p1.character_data)
+	push_fighter(_hud, 2, _p2.character_data)
 
 # Maps a CharacterData (name + signature color) onto the HUD's fighter plate.
 # Null-safe: falls back to "P1"/"P2" and the default accent when data is missing.
@@ -120,7 +135,9 @@ func _reset_round() -> void:
 	_hud.set_timer(_state.seconds_left())
 	_hud.set_rounds(1, _state.p1_rounds)
 	_hud.set_rounds(2, _state.p2_rounds)
-	_hud.announce("ROUND %d" % (_state.p1_rounds + _state.p2_rounds + 1))
+	var round_num: int = _state.p1_rounds + _state.p2_rounds + 1
+	_hud.set_round(round_num)             # 7.4 fix: was never wired — stuck at the .tscn's "ROUND 1"
+	_hud.announce("ROUND %d" % round_num)
 
 func _update_bars() -> void:
 	# 6.3/6.4 — per-character max health (Sofia 900, Jacob 1150); bars are fractions of it.

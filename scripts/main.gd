@@ -8,6 +8,17 @@ const FLOOR_Y: float = 560.0
 const LEFT_WALL_X: float = 50.0
 const RIGHT_WALL_X: float = 1230.0
 
+# 7.3 — dynamic fight camera: frames both fighters like a classic fighting-game
+# camera — pushed in on the action when they're close, pulling back out as they
+# part, never showing past the 1280x720 canvas. The cinematic ultimate owns the
+# camera while one is live.
+const CAM_MARGIN: float = 130.0      # world px kept beyond the fighters' midpoint gap
+const CAM_MAX_ZOOM: float = 2.1      # closest push-in (point-blank fighters)
+const CAM_FLOOR_PAD: float = 70.0    # world px kept visible below the floor line
+const CAM_HEAD_PAD: float = 110.0    # px above a fighter's feet that must stay framed
+const CAM_POS_WEIGHT: float = 0.10   # per-physics-frame smoothing
+const CAM_ZOOM_WEIGHT: float = 0.08
+
 @onready var _overlay: Node = $DebugOverlay
 @onready var _p1: CharacterController = $P1
 @onready var _p2: CharacterController = $P2
@@ -15,6 +26,7 @@ const RIGHT_WALL_X: float = 1230.0
 @onready var _floor: ColorRect = $Floor
 @onready var _camera: Camera2D = $Camera
 @onready var _match_hud: CanvasLayer = $MatchHUD
+@onready var _match_manager: Node = $MatchManager
 
 const PROJECTILE_SCENE := preload("res://scenes/projectile.tscn")
 var _projectiles: Array[Projectile] = []
@@ -34,6 +46,12 @@ func _ready() -> void:
 		_p1.set_character(MatchSelection.p1_data, MatchSelection.p1_color)
 	if MatchSelection.p2_data != null:
 		_p2.set_character(MatchSelection.p2_data, MatchSelection.p2_color)
+	# 7.4 fix: push the (now-correct) fighter data to the HUD. MatchManager is
+	# an earlier sibling under this same node, so its own _ready() already ran
+	# — BEFORE the set_character() calls above — and would have read stale
+	# .tscn-baked data if it pushed the HUD itself. Calling it from here,
+	# after the override, is what actually fixes the ordering.
+	_match_manager.refresh_fighters()
 	# 7.2 — stage-select pick (if any) overrides the .tscn-authored background/floor.
 	if MatchSelection.stage_data != null:
 		_background.color = MatchSelection.stage_data.background_color
@@ -55,6 +73,31 @@ func _physics_process(_delta: float) -> void:
 	# otherwise shove the fighters out of their choreographed positions.
 	if _throw == null and _ultimate == null:
 		_resolve_pushboxes()
+	# Camera last: it frames this tick's final positions. The cinematic drives
+	# the camera itself while live; on release it hands back mid-frame and the
+	# dynamic camera lerps home from wherever the cutscene left it.
+	if _ultimate == null:
+		_update_camera()
+
+
+# Fit-both framing: zoom is derived from the fighters' horizontal gap (plus
+# margin), the camera sits on their midpoint, anchored so the floor stays in
+# frame, rising when someone jumps toward the top edge. Everything is clamped
+# to the canvas, so at zoom 1 this converges to the old fixed full-stage view.
+func _update_camera() -> void:
+	var half_needed: float = absf(_p2.position.x - _p1.position.x) * 0.5 + CAM_MARGIN
+	var z: float = lerpf(_camera.zoom.x,
+			clampf(640.0 / half_needed, 1.0, CAM_MAX_ZOOM), CAM_ZOOM_WEIGHT)
+	_camera.zoom = Vector2.ONE * z
+	var half_w: float = 640.0 / z
+	var half_h: float = 360.0 / z
+	var top_y: float = minf(_p1.position.y, _p2.position.y) - CAM_HEAD_PAD
+	var target := Vector2(
+			(_p1.position.x + _p2.position.x) * 0.5,
+			minf(FLOOR_Y + CAM_FLOOR_PAD - half_h, top_y + half_h))
+	target.x = clampf(target.x, half_w, 1280.0 - half_w)
+	target.y = clampf(target.y, half_h, 720.0 - half_h)
+	_camera.position = _camera.position.lerp(target, CAM_POS_WEIGHT)
 
 
 # 7.3 — Jerb's cinematic ultimate. Owns both fighters while live: starts on the

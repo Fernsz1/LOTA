@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tests/e2e_hud_fighter_sync.gd" id="1_sync"]
+
+[node name="E2EHudFighterSync" type="Node"]
+script = ExtResource("1_sync")
