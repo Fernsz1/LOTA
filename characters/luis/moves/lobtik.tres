@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="MoveData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
+
+[resource]
+script = ExtResource("1_move")
+move_name = "luis_lobtik"
+startup = 12
+active = 3
+recovery = 20
+hitboxes = Array[Rect2]([Rect2(20, -76, 85, 30)])
+damage = 110
+hitstun = 22
+blockstun = 16
+hitstop = 12
+pushback_hit = 5.0
+pushback_block = 7.0
+causes_knockdown = true
+cancel_window_start = 12
+cancel_window_end = 20

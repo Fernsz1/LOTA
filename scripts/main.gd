@@ -63,11 +63,25 @@ func _try_hit(attacker: CharacterController, defender: CharacterController) -> v
 		return
 	var overlapping: bool = CombatBoxes.overlaps(attacker.get_hitboxes(), defender.get_hurtboxes())
 	var guarding: bool = HitResolver.is_guarding(defender.fsm_state(), defender.is_holding_back())
-	var outcome: int = HitResolver.classify(overlapping, defender.is_invulnerable(), guarding)
+	var outcome: int = HitResolver.classify(overlapping, defender.is_invulnerable(),
+			guarding, defender.is_countering())
 	if outcome == HitResolver.Outcome.NONE:
 		return
 
 	attacker.mark_move_hit()                                  # one hit per attack
+	if outcome == HitResolver.Outcome.COUNTERED:
+		# 6.2 — the stance answers the strike: the ATTACKER eats the counter's
+		# payload (damage/knockdown/pushback via the normal apply_hit path) and
+		# the defender is released to neutral. Hitstop is the COUNTER move's.
+		var counter: MoveData = defender.get_current_move()
+		attacker.apply_hitstop(counter.hitstop)
+		defender.apply_hitstop(counter.hitstop)
+		var away: float = signf(attacker.position.x - defender.position.x)
+		if away == 0.0:
+			away = -float(attacker.facing)
+		attacker.apply_hit(counter, away)
+		defender.end_counter()
+		return
 	attacker.apply_hitstop(move.hitstop)                      # freeze BOTH (feel-reference §4)
 	defender.apply_hitstop(move.hitstop)
 	var push_dir: float = signf(defender.position.x - attacker.position.x)
