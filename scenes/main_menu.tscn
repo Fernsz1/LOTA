@@ -309,7 +309,7 @@ theme_override_constants/separation = 8
 [node name="HintLabel" type="Label" parent="ControlsPanel/Panel/VBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
-text = "Click a key, then press a new one. Esc cancels."
+text = "Click Keyboard or Gamepad, then press the new input. Esc cancels."
 horizontal_alignment = 1
 autowrap_mode = 2
 
