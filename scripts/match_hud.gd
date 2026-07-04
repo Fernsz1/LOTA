@@ -18,6 +18,7 @@ const METER_FILL_READY := preload("res://assets/hud/meter_fill_green.png")
 
 const DRAIN_TIME: float = 0.35
 const FLASH_TIME: float = 0.17
+const BLINK_TIME: float = 0.35   # half-cycle; full blink ~0.7s
 
 @onready var _health := {1: $HUD/P1/Health, 2: $HUD/P2/Health}
 @onready var _flash := {1: $HUD/P1/Health/Flash, 2: $HUD/P2/Health/Flash}
@@ -35,19 +36,60 @@ const FLASH_TIME: float = 0.17
 var _accent := {1: ACCENT_DEFAULT[1], 2: ACCENT_DEFAULT[2]}
 var _hp_target := {1: 1.0, 2: 1.0}
 var _meter_target := {1: 0.0, 2: 0.0}
+var _hp_tween := {1: null, 2: null}
+var _meter_tween := {1: null, 2: null}
+var _blink := {1: null, 2: null}
 
 func set_health(player: int, frac: float) -> void:
 	var f: float = clampf(frac, 0.0, 1.0)
+	if f < _hp_target[player]:
+		_pulse_flash(player)
 	_hp_target[player] = f
-	_health[player].value = f * 100.0
+	var bar: TextureProgressBar = _health[player]
+	if _hp_tween[player] != null:
+		_hp_tween[player].kill()
+	var t := bar.create_tween()
+	t.tween_property(bar, "value", f * 100.0, DRAIN_TIME).set_trans(Tween.TRANS_SINE)
+	_hp_tween[player] = t
+
+func _pulse_flash(player: int) -> void:
+	var overlay: ColorRect = _flash[player]
+	overlay.modulate.a = 1.0
+	var t := overlay.create_tween()
+	t.tween_property(overlay, "modulate:a", 0.0, FLASH_TIME)
 
 func set_meter(player: int, frac: float) -> void:
 	var f: float = clampf(frac, 0.0, 1.0)
 	_meter_target[player] = f
-	_meter[player].value = f * 100.0
+	var bar: TextureProgressBar = _meter[player]
+	if _meter_tween[player] != null:
+		_meter_tween[player].kill()
+	var t := bar.create_tween()
+	t.tween_property(bar, "value", f * 100.0, DRAIN_TIME).set_trans(Tween.TRANS_SINE)
+	_meter_tween[player] = t
 	var ready: bool = f >= 1.0
-	_meter[player].texture_progress = METER_FILL_READY if ready else METER_FILL[player]
-	_super_ready[player].visible = ready
+	bar.texture_progress = METER_FILL_READY if ready else METER_FILL[player]
+	if ready:
+		_start_blink(player)
+	else:
+		_stop_blink(player)
+
+func _start_blink(player: int) -> void:
+	var label: Label = _super_ready[player]
+	label.visible = true
+	if _blink[player] != null and _blink[player].is_running():
+		return
+	var t := label.create_tween().set_loops()
+	t.tween_property(label, "modulate:a", 0.2, BLINK_TIME)
+	t.tween_property(label, "modulate:a", 1.0, BLINK_TIME)
+	_blink[player] = t
+
+func _stop_blink(player: int) -> void:
+	if _blink[player] != null:
+		_blink[player].kill()
+		_blink[player] = null
+	_super_ready[player].visible = false
+	_super_ready[player].modulate.a = 1.0
 
 func set_timer(seconds: int) -> void:
 	_timer.text = "%02d" % seconds
@@ -68,5 +110,11 @@ func announce(text: String) -> void:
 
 func snap() -> void:
 	for p in [1, 2]:
+		if _hp_tween[p] != null:
+			_hp_tween[p].kill()
+			_hp_tween[p] = null
+		if _meter_tween[p] != null:
+			_meter_tween[p].kill()
+			_meter_tween[p] = null
 		_health[p].value = _hp_target[p] * 100.0
 		_meter[p].value = _meter_target[p] * 100.0

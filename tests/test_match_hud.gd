@@ -28,16 +28,29 @@ func _initialize() -> void:
 	_check(is_equal_approx(hud._health[1].value, 50.0), "P1 health bar -> 50")
 	_check(is_equal_approx(hud._health[2].value, 25.0), "P2 health bar -> 25")
 
-	# meter below full: player fill, ready hidden
+	# taking damage raises the flash overlay; snap kills the drain tween
+	hud.set_health(1, 1.0)
+	hud.snap()
+	hud.set_health(1, 0.6)   # a drop -> flash
+	_check(hud._flash[1].modulate.a > 0.0, "damage raises P1 hit-flash")
+	hud.snap()
+	_check(is_equal_approx(hud._health[1].value, 60.0), "snap jumps P1 health to target mid-drain")
+
+	# meter below full: player fill, ready hidden, blink stopped
 	hud.set_meter(1, 0.4)
 	hud.snap()
-	_check(is_equal_approx(hud._meter[1].value, 40.0), "P1 meter -> 40")
+	_check(is_equal_approx(hud._meter[1].value, 40.0), "P1 meter snaps to 40")
 	_check(not hud._super_ready[1].visible, "P1 SUPER READY hidden below full")
 
-	# meter full: green fill swap + ready shown
+	# meter full: green fill swap + ready shown + blink running
 	hud.set_meter(1, 1.0)
 	_check(hud._super_ready[1].visible, "P1 SUPER READY shown at full")
 	_check(hud._meter[1].texture_progress == hud.METER_FILL_READY, "P1 meter fill swaps to green at full")
+	_check(hud._blink[1] != null and hud._blink[1].is_running(), "P1 blink tween runs while full")
+
+	# dropping below full stops the blink
+	hud.set_meter(1, 0.9)
+	_check(hud._blink[1] == null, "P1 blink stops below full")
 
 	# timer color threshold
 	hud.set_timer(30)
