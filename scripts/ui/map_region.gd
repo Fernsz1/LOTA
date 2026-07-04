@@ -1,12 +1,12 @@
+@tool
 class_name MapRegion
 extends Node2D
-## One clickable Philippines region on the map-select screen. Built at runtime from
-## a baked region dict (data/map_regions.json). Fill = Polygon2D per ring; outline =
-## black Line2D; accent glow = wider Line2D shown when active; hit-test = Area2D +
-## CollisionPolygon2D per ring. Hover/selected lifts the whole node uniformly.
-
-signal region_hovered(id: int)
-signal region_clicked(id: int)
+## One clickable Philippines region on the map-select screen. Built from a baked
+## region dict (data/map_regions.json) at runtime and, via the @tool parent, in the
+## editor. Fill = Polygon2D per ring; outline = black Line2D; accent glow = wider
+## Line2D shown when active. Hit-testing is point-in-polygon (see contains_point) —
+## no Area2D, so the concave archipelago rings never hit Godot's physics convex
+## decomposition (which fails on them). Hover/selected lifts the whole node uniformly.
 
 const LIFT_PX := 16.0
 const REST_FILL := Color("63552f")
@@ -18,6 +18,7 @@ var accent: Color = Color.WHITE
 
 var _fills: Array[Polygon2D] = []
 var _glows: Array[Line2D] = []
+var _rings: Array[PackedVector2Array] = []
 var _base_y: float = 0.0
 var _tween: Tween
 
@@ -30,6 +31,7 @@ func setup(data: Dictionary) -> void:
 
 	for ring: Array in rings:
 		var pts := _to_points(ring)
+		_rings.append(pts)
 
 		var glow := Line2D.new()
 		glow.points = _closed(pts)
@@ -57,14 +59,6 @@ func setup(data: Dictionary) -> void:
 		outline.begin_cap_mode = Line2D.LINE_CAP_ROUND
 		outline.end_cap_mode = Line2D.LINE_CAP_ROUND
 		add_child(outline)
-
-		var area := Area2D.new()
-		var cp := CollisionPolygon2D.new()
-		cp.polygon = pts
-		area.add_child(cp)
-		add_child(area)
-		area.mouse_entered.connect(func() -> void: region_hovered.emit(region_id))
-		area.input_event.connect(_on_area_input)
 
 	var label := Label.new()
 	label.text = str(data["display_name"]).to_upper()
@@ -97,9 +91,16 @@ func _closed(pts: PackedVector2Array) -> PackedVector2Array:
 	return c
 
 
-func _on_area_input(_vp: Node, event: InputEvent, _idx: int) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		region_clicked.emit(region_id)
+func contains_point(p: Vector2) -> bool:
+	## p is in the parent (MapContainer) space; the rings are authored in that space
+	## and this node's base offset is (0, 0), so test directly. Tests against the
+	## resting geometry (ignores the active lift) so the hit area doesn't shift as the
+	## region rises. Union over rings: inside if within any ring (rings are separate
+	## islands, not holes).
+	for ring: PackedVector2Array in _rings:
+		if Geometry2D.is_point_in_polygon(p, ring):
+			return true
+	return false
 
 
 func set_active(active: bool) -> void:
@@ -109,10 +110,13 @@ func set_active(active: bool) -> void:
 	for f: Polygon2D in _fills:
 		f.color = target_fill
 	z_index = 1 if active else 0
+	var target_y := _base_y - LIFT_PX if active else _base_y
+	if Engine.is_editor_hint():
+		position.y = target_y
+		return
 	if _tween and _tween.is_running():
 		_tween.kill()
 	_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-	var target_y := _base_y - LIFT_PX if active else _base_y
 	_tween.tween_property(self, "position:y", target_y, 0.15)
 
 

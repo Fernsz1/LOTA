@@ -1,8 +1,11 @@
+@tool
 extends Control
 ## Map Select (7.6). Player picks a stage by clicking one of 5 Philippines regions.
-## Regions are built at runtime from data/map_regions.json. Confirming sets
-## MatchSelection.stage_data and advances to the loading screen. Replaces the old
-## grid stage_select in the character-select -> stage -> loading flow.
+## Regions are built from data/map_regions.json at runtime AND in the editor (@tool),
+## so the silhouette previews live while editing the scene. Hit-testing is
+## point-in-polygon (Geometry2D). Confirming sets MatchSelection.stage_data and
+## advances to the loading screen. Replaces the old grid stage_select in the
+## character-select -> stage -> loading flow.
 
 signal stage_confirmed(region_id: int, stage_name: String, fighter: String)
 
@@ -27,7 +30,20 @@ var _locked: bool = false
 
 
 func _ready() -> void:
-	get_viewport().physics_object_picking = true
+	_build_map()
+	select_region(_selected_id)
+	if Engine.is_editor_hint():
+		return
+	_confirm_btn.pressed.connect(_on_confirm_pressed)
+
+
+func _build_map() -> void:
+	# Rebuild from scratch (the editor re-runs _ready on scene reload). Children are
+	# created without an owner, so they render in the editor but are never saved.
+	for child in _map_root.get_children():
+		child.free()
+	_regions.clear()
+	_nodes.clear()
 	var f := FileAccess.open(DATA_PATH, FileAccess.READ)
 	var doc: Dictionary = JSON.parse_string(f.get_as_text())
 	var map_size := Vector2(float(doc["map_size"][0]), float(doc["map_size"][1]))
@@ -39,22 +55,34 @@ func _ready() -> void:
 		_map_root.add_child(node)
 		node.setup(data)
 		node.set_base_y(0.0)
-		node.region_hovered.connect(_on_region_hovered)
-		node.region_clicked.connect(select_region)
 		_nodes[id] = node
-	_confirm_btn.pressed.connect(_on_confirm_pressed)
-	select_region(_selected_id)
 
 
 func _active_id() -> int:
 	return _hovered_id if _hovered_id != 0 else _selected_id
 
 
-func _on_region_hovered(id: int) -> void:
-	if _locked:
+func _region_at() -> int:
+	# id of the region under the mouse, or 0 if none. Point tested in MapContainer space.
+	var local: Vector2 = _map_root.to_local(get_global_mouse_position())
+	for rid: int in _nodes:
+		if _nodes[rid].contains_point(local):
+			return rid
+	return 0
+
+
+func _gui_input(event: InputEvent) -> void:
+	if _locked or Engine.is_editor_hint():
 		return
-	_hovered_id = id
-	_refresh()
+	if event is InputEventMouseMotion:
+		var id := _region_at()
+		if id != _hovered_id:      # 0 when the cursor is off the map -> falls back to selected
+			_hovered_id = id
+			_refresh()
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var id := _region_at()
+		if id != 0:
+			select_region(id)
 
 
 func select_region(id: int) -> void:
