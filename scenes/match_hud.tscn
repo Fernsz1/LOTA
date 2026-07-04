@@ -151,7 +151,9 @@ text = "SIGABO"
 label_settings = null
 
 [node name="Meter" type="TextureProgressBar" parent="HUD/P1/MeterRow"]
-custom_minimum_size = Vector2(400, 22)
+custom_minimum_size = Vector2(0, 22)
+size_flags_horizontal = 3
+size_flags_vertical = 4
 max_value = 100.0
 step = 0.01
 value = 0.0
@@ -161,7 +163,8 @@ texture_under = ExtResource("8_mtrk")
 texture_progress = ExtResource("9_mfb")
 
 [node name="Ready" type="Label" parent="HUD/P1/MeterRow"]
-visible = false
+custom_minimum_size = Vector2(150, 0)
+modulate = Color(1, 1, 1, 0)
 theme_override_colors/font_color = Color(0.651, 1, 0, 1)
 text = "SUPER READY!"
 
@@ -262,20 +265,24 @@ modulate = Color(1, 1, 1, 0)
 mouse_filter = 2
 
 [node name="MeterRow" type="HBoxContainer" parent="HUD/P2"]
-offset_left = 200.0
+offset_left = 0.0
 offset_top = 148.0
 offset_right = 610.0
 offset_bottom = 178.0
 theme_override_constants/separation = 12
-alignment = 2
+alignment = 0
 
 [node name="Ready" type="Label" parent="HUD/P2/MeterRow"]
-visible = false
+custom_minimum_size = Vector2(150, 0)
+modulate = Color(1, 1, 1, 0)
+horizontal_alignment = 2
 theme_override_colors/font_color = Color(0.651, 1, 0, 1)
 text = "SUPER READY!"
 
 [node name="Meter" type="TextureProgressBar" parent="HUD/P2/MeterRow"]
-custom_minimum_size = Vector2(400, 22)
+custom_minimum_size = Vector2(0, 22)
+size_flags_horizontal = 3
+size_flags_vertical = 4
 max_value = 100.0
 step = 0.01
 value = 0.0

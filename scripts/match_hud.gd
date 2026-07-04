@@ -75,8 +75,10 @@ func set_meter(player: int, frac: float) -> void:
 		_stop_blink(player)
 
 func _start_blink(player: int) -> void:
+	# SUPER READY! keeps its reserved layout slot always (matches the mock); only its
+	# opacity animates, so the meter never reflows when the ready state flips.
 	var label: Label = _super_ready[player]
-	label.visible = true
+	label.modulate.a = 1.0
 	if _blink[player] != null and _blink[player].is_running():
 		return
 	var t := label.create_tween().set_loops()
@@ -88,8 +90,7 @@ func _stop_blink(player: int) -> void:
 	if _blink[player] != null:
 		_blink[player].kill()
 		_blink[player] = null
-	_super_ready[player].visible = false
-	_super_ready[player].modulate.a = 1.0
+	_super_ready[player].modulate.a = 0.0
 
 func set_timer(seconds: int) -> void:
 	_timer.text = "%02d" % seconds

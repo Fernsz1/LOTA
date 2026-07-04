@@ -40,11 +40,11 @@ func _initialize() -> void:
 	hud.set_meter(1, 0.4)
 	hud.snap()
 	_check(is_equal_approx(hud._meter[1].value, 40.0), "P1 meter snaps to 40")
-	_check(not hud._super_ready[1].visible, "P1 SUPER READY hidden below full")
+	_check(is_equal_approx(hud._super_ready[1].modulate.a, 0.0), "P1 SUPER READY hidden (alpha 0) below full")
 
 	# meter full: green fill swap + ready shown + blink running
 	hud.set_meter(1, 1.0)
-	_check(hud._super_ready[1].visible, "P1 SUPER READY shown at full")
+	_check(hud._super_ready[1].modulate.a > 0.0, "P1 SUPER READY shown (alpha>0) at full")
 	_check(hud._meter[1].texture_progress == hud.METER_FILL_READY, "P1 meter fill swaps to green at full")
 	_check(hud._blink[1] != null and hud._blink[1].is_running(), "P1 blink tween runs while full")
 
