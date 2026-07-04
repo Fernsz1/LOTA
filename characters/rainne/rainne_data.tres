@@ -9,6 +9,7 @@
 [resource]
 script = ExtResource("1_cd")
 character_name = "Rainne"
+color = Color(0.9, 0.55, 0.15, 1)
 max_health = 1000
 walk_speed = 4.2
 walk_b_speed = 4.0

@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/character/character_data.gd" id="1_cd"]
+[ext_resource type="Resource" path="res://characters/luis/moves/witik.tres" id="2_fast"]
+[ext_resource type="Resource" path="res://characters/luis/moves/lobtik.tres" id="3_heavy"]
+[ext_resource type="Resource" path="res://characters/luis/moves/sangga.tres" id="4_skill"]
+[ext_resource type="Resource" path="res://characters/luis/moves/sinawali.tres" id="5_ult"]
+
+[resource]
+script = ExtResource("1_cd")
+character_name = "Luis"
+color = Color(0.4, 0.62, 0.24, 1)
+max_health = 1000
+walk_speed = 4.6
+walk_b_speed = 4.2
+jump_velocity = -13.0
+jump_f_speed = 3.2
+gravity = 0.6
+backdash_speed = 8.0
+backdash_frames = 18
+move_fast = ExtResource("2_fast")
+move_heavy = ExtResource("3_heavy")
+move_skill = ExtResource("4_skill")
+move_ultimate = ExtResource("5_ult")

@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=17 format=3]
+[gd_resource type="Theme" load_steps=18 format=3]
 
 ; Shared UI theme for "Legends of The Archipelago" menus.
 ; Palette values mirror scripts/ui/ui_palette.gd — keep the two in sync.
@@ -199,6 +199,20 @@ corner_radius_bottom_left = 10
 shadow_color = Color(1, 0.353, 0.353, 0.35)
 shadow_size = 8
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cursor_neutral"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.851, 0.369, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(1, 0.851, 0.369, 0.35)
+shadow_size = 8
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tile"]
 content_margin_left = 6.0
 content_margin_top = 6.0
@@ -253,6 +267,8 @@ CursorP1/base_type = &"Panel"
 CursorP1/styles/panel = SubResource("StyleBoxFlat_cursor_p1")
 CursorP2/base_type = &"Panel"
 CursorP2/styles/panel = SubResource("StyleBoxFlat_cursor_p2")
+CursorNeutral/base_type = &"Panel"
+CursorNeutral/styles/panel = SubResource("StyleBoxFlat_cursor_neutral")
 GhostButton/base_type = &"Button"
 GhostButton/font_sizes/font_size = 20
 GhostButton/styles/disabled = SubResource("StyleBoxFlat_ghost_normal")

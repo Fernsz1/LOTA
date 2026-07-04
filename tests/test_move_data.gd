@@ -27,6 +27,7 @@ func _initialize() -> void:
 	_test_validate_with_projectile()
 	_test_invuln_window()
 	_test_velocity_at()
+	_test_validate_counter()
 	print("\n%d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -144,3 +145,30 @@ func _test_velocity_at() -> void:
 	d.move_velocity_start = 8
 	d.move_velocity_end = 4
 	_check(not d.validate(), "inverted velocity window fails validate()")
+
+func _test_validate_counter() -> void:
+	# 6.2 — a counter stance is the one legal hitbox-less, projectile-less move.
+	var m := MD.new()
+	m.move_name = "counter_ok"
+	m.is_counter = true
+	m.startup = 4
+	m.active = 14
+	m.recovery = 22
+	m.damage = 120
+	m.hitstop = 14
+	m.pushback_hit = 5.0
+	m.causes_knockdown = true
+	_check(m.validate(), "counter with empty hitboxes validates")
+
+	var g := MD.new()
+	g.move_name = "counter_grab_bad"
+	g.is_counter = true
+	g.is_grab = true
+	g.hitboxes = [Rect2(0, -70, 40, 40)] as Array[Rect2]
+	_check(not g.validate(), "is_counter + is_grab is rejected")
+
+	var p := MD.new()
+	p.move_name = "counter_proj_bad"
+	p.is_counter = true
+	p.projectile = PD.new()
+	_check(not p.validate(), "is_counter + projectile is rejected")

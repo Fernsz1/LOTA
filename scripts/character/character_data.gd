@@ -7,6 +7,7 @@ extends Resource
 const MD := preload("res://scripts/combat/move_data.gd")
 
 @export var character_name: String = ""
+@export var color: Color = Color(1, 1, 1, 1)    # 7.2 — signature color: select swatch, box_color in-fight, intro/results cards
 @export var max_health: int = 1000              # authored; not consumed for the bar in v1 (see plan)
 @export var walk_speed: float = 5.0             # px/frame (was 180.0 per-second — wrong unit)
 @export var walk_b_speed: float = 4.5           # px/frame, back-walk

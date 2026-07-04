@@ -1,16 +1,31 @@
 extends Control
 ## Tekken-style select screen. Both players share one grid; each moves their own
 ## cursor with p{n}_left/right, locks in with p{n}_fast, and unlocks with p{n}_heavy.
-## Jerb/Rainne/Jacob/Sofia are playable — the remaining slot is a locked stub. Once both
-## players are locked, their picks go to MatchSelection and we move on to loading.
+##
+## 7.2 — roster is data-driven: every folder under characters/ with a matching
+## <id>/<id>_data.tres is auto-discovered and shown unlocked. Nothing here needs
+## editing to add a character — drop the folder + resource in and it appears.
+## ROSTER_ORDER is display-order only (unlisted ids sort after it, alphabetically);
+## slots are padded with locked "???" stubs up to ROSTER_SIZE so the full planned
+## roster size reads correctly before every character is built.
 
-const SLOTS: Array[Dictionary] = [
-	{"id": "jerb", "name": "JERB", "tag": "ALL-ROUNDER", "locked": false, "data_path": "res://characters/jerb/jerb_data.tres", "color": Color(0.2, 0.5, 0.9, 1)},
-	{"id": "rainne", "name": "RAINNE", "tag": "STRIKER", "locked": false, "data_path": "res://characters/rainne/rainne_data.tres", "color": Color(0.9, 0.55, 0.15, 1)},
-	{"id": "jacob", "name": "JACOB", "tag": "GRAPPLER", "locked": false, "data_path": "res://characters/jacob/jacob_data.tres", "color": Color(0.62, 0.16, 0.18, 1)},
-	{"id": "sofia", "name": "SOFIA", "tag": "SKIRMISHER", "locked": false, "data_path": "res://characters/sofia/sofia_data.tres", "color": Color(0.85, 0.25, 0.4, 1)},
-	{"id": "locked_1", "name": "???", "tag": "COMING SOON", "locked": true, "data_path": "", "color": Color(0.22, 0.22, 0.25, 1)},
-]
+const CHARACTERS_DIR := "res://characters/"
+const ROSTER_ORDER: Array[String] = ["jerb", "rainne", "luis", "sofia", "jacob"]
+const ROSTER_SIZE := 5
+const LOCKED_COLOR := Color(0.22, 0.22, 0.25, 1)
+
+# Display-only archetype tag shown under each fighter's name (a UI concern, so it
+# lives here rather than in CharacterData — same spirit as ROSTER_ORDER above).
+# Unlisted ids fall back to GENERIC_TAG; locked stubs use LOCKED_TAG.
+const STYLE_TAGS := {
+	"jerb": "ALL-ROUNDER",
+	"rainne": "STRIKER",
+	"jacob": "GRAPPLER",
+	"sofia": "SKIRMISHER",
+	"luis": "ZONER",
+}
+const GENERIC_TAG := "FIGHTER"
+const LOCKED_TAG := "COMING SOON"
 
 const SLOT_SIZE := Vector2(190, 260)
 const PORTRAIT_HEIGHT := 180.0
@@ -24,6 +39,7 @@ const FIGHTER_SILHOUETTE := preload("res://art/ui/silhouettes/fighter.svg")
 @onready var _p1_status: Label = $StatusRow/P1Status
 @onready var _p2_status: Label = $StatusRow/P2Status
 
+var _slots: Array[Dictionary] = []
 var _slot_nodes: Array[Control] = []
 var _p1_slot: int = 0
 var _p2_slot: int = 1
@@ -33,11 +49,52 @@ var _advanced: bool = false
 
 
 func _ready() -> void:
-	for slot: Dictionary in SLOTS:
+	_slots = _build_roster()
+	for slot: Dictionary in _slots:
 		_slot_nodes.append(_build_slot(slot))
 	# Container layout resolves at end-of-frame; positioning cursors now would read
 	# stale (zero) rects, so defer until the row has actually been sorted.
 	call_deferred("_init_cursors")
+
+
+## Scans characters/ for <id>/<id>_data.tres, loads whatever exists, sorts by
+## ROSTER_ORDER (unlisted ids alphabetically after it), then pads with locked
+## stubs up to ROSTER_SIZE.
+func _build_roster() -> Array[Dictionary]:
+	var found: Array[Dictionary] = []
+	var dir := DirAccess.open(CHARACTERS_DIR)
+	if dir:
+		dir.list_dir_begin()
+		var folder := dir.get_next()
+		while folder != "":
+			if dir.current_is_dir():
+				var path := "%s%s/%s_data.tres" % [CHARACTERS_DIR, folder, folder]
+				if ResourceLoader.exists(path):
+					var data: CharacterData = load(path)
+					found.append({
+						"id": folder, "locked": false,
+						"name": data.character_name.to_upper(),
+						"tag": STYLE_TAGS.get(folder, GENERIC_TAG),
+						"color": data.color, "data": data,
+					})
+			folder = dir.get_next()
+		dir.list_dir_end()
+
+	found.sort_custom(_by_roster_order)
+
+	while found.size() < ROSTER_SIZE:
+		found.append({"id": "", "locked": true, "name": "???", "tag": LOCKED_TAG, "color": LOCKED_COLOR, "data": null})
+	return found
+
+
+func _by_roster_order(a: Dictionary, b: Dictionary) -> bool:
+	var ai: int = ROSTER_ORDER.find(a["id"])
+	var bi: int = ROSTER_ORDER.find(b["id"])
+	if ai == -1: ai = 999
+	if bi == -1: bi = 999
+	if ai != bi:
+		return ai < bi
+	return a["id"] < b["id"]
 
 
 func _build_slot(slot: Dictionary) -> Control:
@@ -140,11 +197,11 @@ func _handle_player(player: int) -> void:
 		return
 
 	if Input.is_action_just_pressed("p%d_left" % player):
-		_set_slot(player, (slot - 1 + SLOTS.size()) % SLOTS.size())
+		_set_slot(player, (slot - 1 + _slots.size()) % _slots.size())
 	elif Input.is_action_just_pressed("p%d_right" % player):
-		_set_slot(player, (slot + 1) % SLOTS.size())
+		_set_slot(player, (slot + 1) % _slots.size())
 	elif Input.is_action_just_pressed("p%d_fast" % player):
-		if not SLOTS[slot]["locked"]:
+		if not _slots[slot]["locked"]:
 			_set_locked(player, true)
 
 
@@ -174,8 +231,8 @@ func _update_cursor(cursor: Control, slot: int) -> void:
 
 
 func _update_status() -> void:
-	_p1_status.text = "P1: %s%s" % [SLOTS[_p1_slot]["name"], "  [LOCKED]" if _p1_locked else ""]
-	_p2_status.text = "P2: %s%s" % [SLOTS[_p2_slot]["name"], "  [LOCKED]" if _p2_locked else ""]
+	_p1_status.text = "P1: %s%s" % [_slots[_p1_slot]["name"], "  [LOCKED]" if _p1_locked else ""]
+	_p2_status.text = "P2: %s%s" % [_slots[_p2_slot]["name"], "  [LOCKED]" if _p2_locked else ""]
 
 
 func _maybe_advance() -> void:
@@ -183,14 +240,14 @@ func _maybe_advance() -> void:
 		return
 	_advanced = true
 
-	var p1: Dictionary = SLOTS[_p1_slot]
-	var p2: Dictionary = SLOTS[_p2_slot]
-	MatchSelection.p1_data = load(p1["data_path"])
+	var p1: Dictionary = _slots[_p1_slot]
+	var p2: Dictionary = _slots[_p2_slot]
+	MatchSelection.p1_data = p1["data"]
 	MatchSelection.p1_color = p1["color"]
-	MatchSelection.p2_data = load(p2["data_path"])
+	MatchSelection.p2_data = p2["data"]
 	MatchSelection.p2_color = p2["color"]
 
-	get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
+	get_tree().change_scene_to_file("res://scenes/stage_select.tscn")
 
 
 func _on_back_pressed() -> void:
