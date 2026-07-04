@@ -20,6 +20,7 @@ func _check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	_test_is_guarding()
 	_test_classify()
+	_test_classify_countered()
 	print("\n%d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -41,3 +42,12 @@ func _test_classify() -> void:
 	_check(HR.classify(true, true, true) == HR.Outcome.NONE, "invuln beats guard → NONE")
 	_check(HR.classify(true, false, true) == HR.Outcome.BLOCK, "overlap + guarding → BLOCK")
 	_check(HR.classify(true, false, false) == HR.Outcome.HIT, "overlap, not guarding → HIT")
+
+func _test_classify_countered() -> void:
+	# 6.2 — priority: invuln > counter > guard. Trailing default keeps v1 call sites intact.
+	_check(HR.classify(true, false, false, true) == HR.Outcome.COUNTERED, "overlap + countering → COUNTERED")
+	_check(HR.classify(true, false, true, true) == HR.Outcome.COUNTERED, "counter beats guard → COUNTERED")
+	_check(HR.classify(true, true, false, true) == HR.Outcome.NONE, "invuln beats counter → NONE")
+	_check(HR.classify(false, false, false, true) == HR.Outcome.NONE, "no overlap while countering → NONE")
+	_check(HR.classify(true, false, true) == HR.Outcome.BLOCK, "omitted param: guard still BLOCKs")
+	_check(HR.classify(true, false, false) == HR.Outcome.HIT, "omitted param: clean HIT unchanged")

@@ -9,7 +9,7 @@ extends RefCounted
 # where the project's global class registry isn't loaded.
 const CSM := preload("res://scripts/fsm/character_state_machine.gd")
 
-enum Outcome { NONE, HIT, BLOCK }
+enum Outcome { NONE, HIT, BLOCK, COUNTERED }
 
 ## A defender is guarding iff it is in an actionable ground state (IDLE/WALK_F/WALK_B/
 ## CROUCH/BLOCK — never mid-attack, airborne, or in a reaction) AND holding the
@@ -18,11 +18,17 @@ enum Outcome { NONE, HIT, BLOCK }
 static func is_guarding(defender_state: int, holding_back: bool) -> bool:
 	return holding_back and CSM.is_actionable(defender_state)
 
-## Classify a contact. No overlap or an invulnerable defender → NONE; a guarding
-## defender → BLOCK; otherwise a clean HIT.
-static func classify(overlapping: bool, invulnerable: bool, guarding: bool) -> Outcome:
+## Classify a contact. No overlap or an invulnerable defender → NONE; a defender
+## whose counter window is live (6.2) → COUNTERED (beats guard — the stance
+## answers strikes even while nominally holding back); a guarding defender →
+## BLOCK; otherwise a clean HIT. The trailing default keeps v1 call sites —
+## including the projectile pass, which must stay un-counterable — unchanged.
+static func classify(overlapping: bool, invulnerable: bool, guarding: bool,
+		countering: bool = false) -> Outcome:
 	if not overlapping or invulnerable:
 		return Outcome.NONE
+	if countering:
+		return Outcome.COUNTERED
 	if guarding:
 		return Outcome.BLOCK
 	return Outcome.HIT

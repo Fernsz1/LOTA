@@ -407,13 +407,14 @@ func _arm(move: MoveData) -> void:
 # fires the first legal cancel in escalation order. Downgrade cancels (heavy→fast) are
 # not allowed; order is fast→heavy, (fast|heavy)→skill, any_attack→ultimate.
 # 6.4: grab moves are never cancel targets — command grabs must be raw.
+# 6.2: counter moves likewise — the stance must be raw, or blocked-heavy→stance is a degenerate frame trap.
 func _try_cancel_input(buf: InputBuffer) -> void:
 	var cur := _fsm.state
-	if move_ultimate != null and not move_ultimate.is_grab \
+	if move_ultimate != null and not move_ultimate.is_grab and not move_ultimate.is_counter \
 			and buf.pressed_within(InputBuffer.ULTIMATE, ATTACK_BUFFER):
 		_cancel_into(CharacterStateMachine.State.SKILL, move_ultimate)
 		return
-	if move_skill != null and not move_skill.is_grab \
+	if move_skill != null and not move_skill.is_grab and not move_skill.is_counter \
 			and cur != CharacterStateMachine.State.SKILL \
 			and buf.pressed_within(InputBuffer.SKILL, ATTACK_BUFFER):
 		_cancel_into(CharacterStateMachine.State.SKILL, move_skill)
@@ -474,6 +475,13 @@ func is_invulnerable() -> bool:
 		return true
 	return false
 
+## 6.2 — true while the current move is a counter stance in its live window.
+## Consulted by the scenes at classification time (mirrors is_invulnerable()).
+func is_countering() -> bool:
+	return _current_move != null and _current_move.is_counter \
+		and CharacterStateMachine.is_attacking(_fsm.state) \
+		and _current_move.is_active(_fsm.frame_in_state)
+
 ## True while holding the away-from-opponent direction (the block input, 2.4).
 func is_holding_back() -> bool:
 	var buf: InputBuffer = InputManager.get_buffer(player_index)
@@ -525,6 +533,13 @@ func apply_block(move: MoveData, push_dir: float) -> void:
 	_stun_frames = move.blockstun
 	_pushback_vel = move.pushback_block * push_dir
 	_fsm.on_blocked()        # → BLOCKSTUN
+
+## 6.2 — successful counter: release the stance to neutral immediately (the same
+## busy-exit request used at total()). The retaliation itself was applied to the
+## ATTACKER by the scene via apply_hit; nothing to apply on the defender side.
+func end_counter() -> void:
+	if CharacterStateMachine.is_attacking(_fsm.state):
+		_fsm.request(CharacterStateMachine.State.IDLE)
 
 ## Resolve a projectile clean hit (3.2) — same effect as apply_hit, ProjectileData payload.
 func apply_hit_proj(data: ProjectileData, push_dir: float) -> void:

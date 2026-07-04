@@ -44,6 +44,13 @@ const PD := preload("res://scripts/combat/projectile_data.gd")
 @export var tech_window: int = 8             # frames from GRABBED entry where victim FAST techs; 0 = untechable
 @export var throw_launch_y: float = -6.0     # victim vertical pop at release (falls into KNOCKDOWN)
 
+# 6.2 — strike counter (Luis). When is_counter, the move is a STANCE, not a
+# strike: `active` is the counter window, `hitboxes` stays empty, and
+# damage/causes_knockdown/hitstop/pushback_hit are the RETALIATION applied to
+# the attacker on trigger (via the normal apply_hit path, roles swapped).
+# hitstun/blockstun are unused (like grabs). Raw only — never a cancel target.
+@export var is_counter: bool = false
+
 ## Total length; spans are disjoint so it's a clean sum (feel-reference §3).
 func total() -> int:
 	return startup + active + recovery
@@ -106,12 +113,20 @@ func validate() -> bool:
 	if startup < 0 or active < 1 or recovery < 0:
 		push_error("MoveData '%s': need startup>=0, active>=1, recovery>=0" % move_name)
 		ok = false
-	if hitboxes.is_empty() and projectile == null:
+	if hitboxes.is_empty() and projectile == null and not is_counter:
 		push_error("MoveData '%s': needs >=1 hitbox (or a projectile)" % move_name)
 		ok = false
 	if damage < 0 or hitstun < 0 or blockstun < 0 or hitstop < 0:
 		push_error("MoveData '%s': negative damage/stun/hitstop" % move_name)
 		ok = false
+	if is_counter and is_grab:
+		push_error("MoveData '%s': a move cannot be both a counter and a grab" % move_name)
+		ok = false
+	if is_counter and projectile != null:
+		push_error("MoveData '%s': a counter cannot spawn a projectile" % move_name)
+		ok = false
+	if is_counter and not hitboxes.is_empty():
+		push_warning("MoveData '%s': counter hitboxes are never read (the active window is the counter window)" % move_name)
 	if is_grab:
 		if throw_release_frames < 1:
 			push_error("MoveData '%s': grab needs throw_release_frames >= 1" % move_name)
@@ -122,8 +137,8 @@ func validate() -> bool:
 		if projectile != null:
 			push_error("MoveData '%s': a grab cannot also spawn a projectile" % move_name)
 			ok = false
-	elif hitstun <= blockstun:
-		# Strike-only smell — grabs don't use hitstun/blockstun at all.
+	elif not is_counter and hitstun <= blockstun:
+		# Strike-only smell — grabs and counters don't use hitstun/blockstun at all.
 		push_warning("MoveData '%s': hitstun <= blockstun inverts block incentive (feel-reference §7)" % move_name)
 	if move_velocity != 0.0:
 		var vend: int = move_velocity_end if move_velocity_end >= 0 else startup + active - 1
