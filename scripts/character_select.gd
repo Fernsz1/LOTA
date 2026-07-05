@@ -27,11 +27,15 @@ const STYLE_TAGS := {
 const GENERIC_TAG := "FIGHTER"
 const LOCKED_TAG := "COMING SOON"
 
-const SLOT_SIZE := Vector2(190, 260)
-const PORTRAIT_HEIGHT := 180.0
-const CURSOR_MARGIN := 8.0
+const SLOT_SIZE := Vector2(212, 150)
+const CURSOR_MARGIN := 6.0
 
 const ART_DIR := "res://assets/char-select/"
+const BEBAS := preload("res://art/fonts/BebasNeue-Regular.ttf")
+
+const INK := Color(0.047, 0.031, 0.024, 1)
+const BONE := Color(0.957, 0.929, 0.886, 1)
+const MUTED := Color(0.6, 0.56, 0.48, 1)
 
 @onready var _roster_strip: HBoxContainer = $RosterStrip
 @onready var _p1_panel: PanelContainer = $Split/P1Panel
@@ -62,8 +66,8 @@ func _load_art(id: String, kind: String) -> Texture2D:
 
 func _ready() -> void:
 	_slots = _build_roster()
-	for slot: Dictionary in _slots:
-		_slot_nodes.append(_build_slot(slot))
+	for i in _slots.size():
+		_slot_nodes.append(_build_slot(_slots[i], i))
 	# Container layout resolves at end-of-frame; positioning cursors now would read
 	# stale (zero) rects, so defer until the row has actually been sorted.
 	call_deferred("_init_cursors")
@@ -109,50 +113,27 @@ func _by_roster_order(a: Dictionary, b: Dictionary) -> bool:
 	return a["id"] < b["id"]
 
 
-func _build_slot(slot: Dictionary) -> Control:
+## Compact comic roster tile: fighter art over an accent fill, a number chip
+## top-left, and an outlined name + accent tag over a dark scrim at the bottom.
+## Locked stubs get a dark fill with a big "?".
+func _build_slot(slot: Dictionary, index: int) -> Control:
+	var locked: bool = slot["locked"]
+	var accent: Color = slot["color"]
 	var tile := PanelContainer.new()
 	tile.custom_minimum_size = SLOT_SIZE
-	tile.theme_type_variation = "CharacterTileLocked" if slot["locked"] else "CharacterTile"
+	tile.clip_contents = true
+	tile.theme_type_variation = "RosterTile"
 
-	var box := VBoxContainer.new()
-	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 6)
-	tile.add_child(box)
-
-	box.add_child(_build_portrait(slot))
-
-	var name_label := Label.new()
-	name_label.text = slot["name"]
-	name_label.theme_type_variation = "TileNameLabel"
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(name_label)
-
-	var tag_label := Label.new()
-	tag_label.text = slot["tag"]
-	tag_label.theme_type_variation = "TagLabel"
-	tag_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	if not slot["locked"]:
-		tag_label.add_theme_color_override("font_color", slot["color"])
-	box.add_child(tag_label)
-
-	_roster_strip.add_child(tile)
-	return tile
-
-
-## Roster tiles show the fighter's real transparent art over an accent hazard
-## fill; locked stubs keep the "?" placeholder over a dark fill.
-func _build_portrait(slot: Dictionary) -> Control:
-	var accent: Color = slot["color"]
-	var portrait := Control.new()
-	portrait.custom_minimum_size = Vector2(0, PORTRAIT_HEIGHT)
-	portrait.clip_contents = true
+	var root := Control.new()
+	root.clip_contents = true
+	tile.add_child(root)
 
 	var backdrop := ColorRect.new()
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.color = Color(accent, 0.9) if not slot["locked"] else Color(0.13, 0.13, 0.15, 1.0)
-	portrait.add_child(backdrop)
+	backdrop.color = accent if not locked else Color(0.13, 0.13, 0.15, 1.0)
+	root.add_child(backdrop)
 
-	if slot["locked"]:
+	if locked:
 		var mystery := Label.new()
 		mystery.text = "?"
 		mystery.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -160,22 +141,87 @@ func _build_portrait(slot: Dictionary) -> Control:
 		mystery.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		mystery.add_theme_font_size_override("font_size", 64)
 		mystery.add_theme_color_override("font_color", Color(0.604, 0.561, 0.478, 0.9))
-		portrait.add_child(mystery)
-		return portrait
+		root.add_child(mystery)
+	else:
+		var art := TextureRect.new()
+		art.set_anchors_preset(Control.PRESET_FULL_RECT)
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		art.texture = _load_art(slot["id"], "transparent")
+		root.add_child(art)
 
-	var art := TextureRect.new()
-	art.set_anchors_preset(Control.PRESET_FULL_RECT)
-	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.texture = _load_art(slot["id"], "transparent")
-	portrait.add_child(art)
-	return portrait
+	# dark scrim so the name stays legible over busy art
+	var scrim := ColorRect.new()
+	scrim.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	scrim.offset_top = -52.0
+	scrim.color = Color(0.047, 0.031, 0.024, 0.8)
+	root.add_child(scrim)
+
+	# number chip, top-left
+	var chip := Label.new()
+	chip.text = "%02d" % (index + 1)
+	chip.position = Vector2(6, 6)
+	chip.add_theme_font_override("font", BEBAS)
+	chip.add_theme_font_size_override("font_size", 18)
+	chip.add_theme_color_override("font_color", INK)
+	chip.add_theme_stylebox_override("normal", _chip_stylebox(accent if not locked else MUTED))
+	root.add_child(chip)
+
+	# name
+	var name_label := Label.new()
+	name_label.text = slot["name"]
+	name_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	name_label.offset_top = -50.0
+	name_label.offset_bottom = -18.0
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	name_label.add_theme_font_override("font", BEBAS)
+	name_label.add_theme_font_size_override("font_size", 30)
+	name_label.add_theme_color_override("font_color", BONE)
+	name_label.add_theme_color_override("font_outline_color", INK)
+	name_label.add_theme_constant_override("outline_size", 6)
+	root.add_child(name_label)
+
+	# tag
+	var tag_label := Label.new()
+	tag_label.text = slot["tag"]
+	tag_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	tag_label.offset_top = -18.0
+	tag_label.offset_bottom = -3.0
+	tag_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tag_label.add_theme_font_size_override("font_size", 11)
+	tag_label.add_theme_color_override("font_color", accent if not locked else MUTED)
+	root.add_child(tag_label)
+
+	_roster_strip.add_child(tile)
+	return tile
 
 
+func _chip_stylebox(accent: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = accent
+	sb.set_border_width_all(2)
+	sb.border_color = INK
+	sb.content_margin_left = 6
+	sb.content_margin_right = 6
+	sb.content_margin_top = 0
+	sb.content_margin_bottom = 2
+	sb.shadow_color = INK
+	sb.shadow_size = 2
+	sb.shadow_offset = Vector2(2, 2)
+	return sb
+
+
+## Rebuilds one preview panel from that player's hovered slot + lock state:
+## paired bg + character art (accent-washed), a giant vertical name, a P#
+## READY/LOCKED corner badge, and a bottom info block (name + accent tag).
 func _refresh_panel(player: int) -> void:
 	var panel: PanelContainer = _p1_panel if player == 1 else _p2_panel
 	var slot: Dictionary = _slots[_p1_slot if player == 1 else _p2_slot]
 	var locked: bool = _p1_locked if player == 1 else _p2_locked
+	var is_stub: bool = slot["locked"]
+	var accent: Color = slot["color"]
+	var badge_color: Color = accent if not is_stub else MUTED
 	for child in panel.get_children():
 		child.queue_free()
 
@@ -184,9 +230,7 @@ func _refresh_panel(player: int) -> void:
 	root.clip_contents = true
 	panel.add_child(root)
 
-	var accent: Color = slot["color"]
-
-	if not slot["locked"]:
+	if not is_stub:
 		var bg := TextureRect.new()
 		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 		bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -194,18 +238,71 @@ func _refresh_panel(player: int) -> void:
 		bg.texture = _load_art(slot["id"], "bg")
 		root.add_child(bg)
 
+		# accent color wash over the bg
+		var wash := ColorRect.new()
+		wash.set_anchors_preset(Control.PRESET_FULL_RECT)
+		wash.color = Color(accent, 0.16)
+		root.add_child(wash)
+
 		var art := TextureRect.new()
 		art.set_anchors_preset(Control.PRESET_FULL_RECT)
 		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		art.texture = _load_art(slot["id"], "transparent")
 		root.add_child(art)
+	else:
+		var backdrop := ColorRect.new()
+		backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+		backdrop.color = Color(0.13, 0.13, 0.15, 1.0)
+		root.add_child(backdrop)
 
-	# bottom info block
+		var mystery := Label.new()
+		mystery.text = "?"
+		mystery.set_anchors_preset(Control.PRESET_FULL_RECT)
+		mystery.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		mystery.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		mystery.add_theme_font_size_override("font_size", 140)
+		mystery.add_theme_color_override("font_color", Color(0.604, 0.561, 0.478, 0.6))
+		root.add_child(mystery)
+
+	# giant vertical short name down the near side, one Label per letter in a
+	# top-aligned VBox so tall Bebas metrics never clip the first glyph
+	var name_text: String = slot["name"]
+	var vlen: int = max(name_text.length(), 1)
+	var vfont: int = int(clamp(180.0 / vlen, 20.0, 42.0))
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.offset_top = 56.0  # clear the P# corner badge above
+	vbox.offset_bottom = -90.0
+	vbox.offset_left = 14.0
+	vbox.offset_right = -14.0
+	vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_theme_constant_override("separation", int(-vfont * 0.25))
+	for i in name_text.length():
+		var letter := Label.new()
+		letter.text = name_text[i]
+		letter.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if player == 1 else HORIZONTAL_ALIGNMENT_RIGHT
+		letter.add_theme_font_override("font", BEBAS)
+		letter.add_theme_font_size_override("font_size", vfont)
+		letter.add_theme_color_override("font_color", badge_color)
+		letter.add_theme_color_override("font_outline_color", INK)
+		letter.add_theme_constant_override("outline_size", 6)
+		vbox.add_child(letter)
+	root.add_child(vbox)
+
+	# bottom info block (fixed-height bar; root is a plain Control so anchors alone
+	# would collapse a PanelContainer to zero height — reserve the rect explicitly)
 	var info := PanelContainer.new()
 	info.theme_type_variation = "PanelInfoBlock"
-	info.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	info.add_theme_stylebox_override("panel", _info_stylebox(accent))
+	info.anchor_left = 0.0
+	info.anchor_right = 1.0
+	info.anchor_top = 1.0
+	info.anchor_bottom = 1.0
+	info.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	info.offset_top = -84.0
+	info.offset_bottom = 0.0
+	info.add_theme_stylebox_override("panel", _info_stylebox(badge_color))
 	root.add_child(info)
 
 	var box := VBoxContainer.new()
@@ -213,15 +310,34 @@ func _refresh_panel(player: int) -> void:
 	info.add_child(box)
 
 	var name_label := Label.new()
-	name_label.text = "%s%s" % [slot["name"], "  // LOCKED" if locked else ""]
-	name_label.add_theme_font_size_override("font_size", 32)
+	name_label.text = slot["name"]
+	name_label.add_theme_font_override("font", BEBAS)
+	name_label.add_theme_font_size_override("font_size", 34)
+	name_label.add_theme_color_override("font_color", BONE)
 	box.add_child(name_label)
 
 	var tag_label := Label.new()
 	tag_label.text = slot["tag"]
 	tag_label.add_theme_font_size_override("font_size", 14)
-	tag_label.add_theme_color_override("font_color", accent if not slot["locked"] else Color(0.6, 0.56, 0.48, 1))
+	tag_label.add_theme_color_override("font_color", badge_color)
 	box.add_child(tag_label)
+
+	# P# // READY|LOCKED corner badge
+	var badge := Label.new()
+	badge.text = "P%d  //  %s" % [player, "LOCKED" if locked else "READY"]
+	badge.add_theme_font_override("font", BEBAS)
+	badge.add_theme_font_size_override("font_size", 28)
+	badge.add_theme_color_override("font_color", INK)
+	badge.add_theme_stylebox_override("normal", _badge_stylebox(badge_color))
+	badge.offset_top = 8.0
+	if player == 1:
+		badge.offset_left = 8.0
+	else:
+		badge.anchor_left = 1.0
+		badge.anchor_right = 1.0
+		badge.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		badge.offset_right = -8.0
+	root.add_child(badge)
 
 
 func _info_stylebox(accent: Color) -> StyleBoxFlat:
@@ -233,6 +349,21 @@ func _info_stylebox(accent: Color) -> StyleBoxFlat:
 	sb.content_margin_right = 16
 	sb.content_margin_top = 10
 	sb.content_margin_bottom = 12
+	return sb
+
+
+func _badge_stylebox(accent: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = accent
+	sb.set_border_width_all(3)
+	sb.border_color = INK
+	sb.content_margin_left = 16
+	sb.content_margin_right = 16
+	sb.content_margin_top = 2
+	sb.content_margin_bottom = 4
+	sb.shadow_color = INK
+	sb.shadow_size = 3
+	sb.shadow_offset = Vector2(5, 5)
 	return sb
 
 
