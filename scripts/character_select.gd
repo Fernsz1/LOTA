@@ -31,9 +31,11 @@ const SLOT_SIZE := Vector2(190, 260)
 const PORTRAIT_HEIGHT := 180.0
 const CURSOR_MARGIN := 8.0
 
-const FIGHTER_SILHOUETTE := preload("res://art/ui/silhouettes/fighter.svg")
+const ART_DIR := "res://assets/char-select/"
 
-@onready var _slots_row: HBoxContainer = $CenterContainer/SlotsRow
+@onready var _roster_strip: HBoxContainer = $RosterStrip
+@onready var _p1_panel: PanelContainer = $Split/P1Panel
+@onready var _p2_panel: PanelContainer = $Split/P2Panel
 @onready var _p1_cursor: Control = $P1Cursor
 @onready var _p2_cursor: Control = $P2Cursor
 @onready var _p1_status: Label = $StatusRow/P1Status
@@ -46,6 +48,16 @@ var _p2_slot: int = 1
 var _p1_locked: bool = false
 var _p2_locked: bool = false
 var _advanced: bool = false
+
+
+func _art_path(id: String, kind: String) -> String:
+	# kind is "transparent" or "bg"
+	return "%s%s_%s.png" % [ART_DIR, id, kind]
+
+
+func _load_art(id: String, kind: String) -> Texture2D:
+	var path := _art_path(id, kind)
+	return load(path) if ResourceLoader.exists(path) else null
 
 
 func _ready() -> void:
@@ -123,33 +135,22 @@ func _build_slot(slot: Dictionary) -> Control:
 		tag_label.add_theme_color_override("font_color", slot["color"])
 	box.add_child(tag_label)
 
-	_slots_row.add_child(tile)
+	_roster_strip.add_child(tile)
 	return tile
 
 
-## Characters are intentionally undesigned: the portrait is a shared dark
-## silhouette tinted toward the fighter's accent color over an accent gradient.
+## Roster tiles show the fighter's real transparent art over an accent hazard
+## fill; locked stubs keep the "?" placeholder over a dark fill.
 func _build_portrait(slot: Dictionary) -> Control:
 	var accent: Color = slot["color"]
 	var portrait := Control.new()
 	portrait.custom_minimum_size = Vector2(0, PORTRAIT_HEIGHT)
+	portrait.clip_contents = true
 
-	var backdrop := TextureRect.new()
+	var backdrop := ColorRect.new()
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	backdrop.texture = _make_backdrop_texture(accent)
+	backdrop.color = Color(accent, 0.9) if not slot["locked"] else Color(0.13, 0.13, 0.15, 1.0)
 	portrait.add_child(backdrop)
-
-	var silhouette := TextureRect.new()
-	silhouette.set_anchors_preset(Control.PRESET_FULL_RECT)
-	silhouette.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	silhouette.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	silhouette.texture = FIGHTER_SILHOUETTE
-	if slot["locked"]:
-		silhouette.modulate = Color(0.35, 0.35, 0.4, 0.4)
-	else:
-		silhouette.modulate = accent.lerp(Color.BLACK, 0.7)
-	portrait.add_child(silhouette)
 
 	if slot["locked"]:
 		var mystery := Label.new()
@@ -160,25 +161,87 @@ func _build_portrait(slot: Dictionary) -> Control:
 		mystery.add_theme_font_size_override("font_size", 64)
 		mystery.add_theme_color_override("font_color", Color(0.604, 0.561, 0.478, 0.9))
 		portrait.add_child(mystery)
+		return portrait
 
+	var art := TextureRect.new()
+	art.set_anchors_preset(Control.PRESET_FULL_RECT)
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.texture = _load_art(slot["id"], "transparent")
+	portrait.add_child(art)
 	return portrait
 
 
-func _make_backdrop_texture(accent: Color) -> GradientTexture2D:
-	var gradient := Gradient.new()
-	gradient.offsets = PackedFloat32Array([0.0, 1.0])
-	gradient.colors = PackedColorArray([Color(accent, 0.35), Color(accent, 0.0)])
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	texture.fill_from = Vector2(0.5, 0.0)
-	texture.fill_to = Vector2(0.5, 1.0)
-	return texture
+func _refresh_panel(player: int) -> void:
+	var panel: PanelContainer = _p1_panel if player == 1 else _p2_panel
+	var slot: Dictionary = _slots[_p1_slot if player == 1 else _p2_slot]
+	var locked: bool = _p1_locked if player == 1 else _p2_locked
+	for child in panel.get_children():
+		child.queue_free()
+
+	var root := Control.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.clip_contents = true
+	panel.add_child(root)
+
+	var accent: Color = slot["color"]
+
+	if not slot["locked"]:
+		var bg := TextureRect.new()
+		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+		bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		bg.texture = _load_art(slot["id"], "bg")
+		root.add_child(bg)
+
+		var art := TextureRect.new()
+		art.set_anchors_preset(Control.PRESET_FULL_RECT)
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		art.texture = _load_art(slot["id"], "transparent")
+		root.add_child(art)
+
+	# bottom info block
+	var info := PanelContainer.new()
+	info.theme_type_variation = "PanelInfoBlock"
+	info.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	info.add_theme_stylebox_override("panel", _info_stylebox(accent))
+	root.add_child(info)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	info.add_child(box)
+
+	var name_label := Label.new()
+	name_label.text = "%s%s" % [slot["name"], "  // LOCKED" if locked else ""]
+	name_label.add_theme_font_size_override("font_size", 32)
+	box.add_child(name_label)
+
+	var tag_label := Label.new()
+	tag_label.text = slot["tag"]
+	tag_label.add_theme_font_size_override("font_size", 14)
+	tag_label.add_theme_color_override("font_color", accent if not slot["locked"] else Color(0.6, 0.56, 0.48, 1))
+	box.add_child(tag_label)
+
+
+func _info_stylebox(accent: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.047, 0.031, 0.024, 0.92)
+	sb.border_width_top = 4
+	sb.border_color = accent
+	sb.content_margin_left = 16
+	sb.content_margin_right = 16
+	sb.content_margin_top = 10
+	sb.content_margin_bottom = 12
+	return sb
 
 
 func _init_cursors() -> void:
 	_update_cursor(_p1_cursor, _p1_slot)
 	_update_cursor(_p2_cursor, _p2_slot)
 	_update_status()
+	_refresh_panel(1)
+	_refresh_panel(2)
 
 
 func _process(_delta: float) -> void:
@@ -213,6 +276,7 @@ func _set_slot(player: int, slot: int) -> void:
 		_p2_slot = slot
 		_update_cursor(_p2_cursor, slot)
 	_update_status()
+	_refresh_panel(player)
 
 
 func _set_locked(player: int, locked: bool) -> void:
@@ -221,6 +285,7 @@ func _set_locked(player: int, locked: bool) -> void:
 	else:
 		_p2_locked = locked
 	_update_status()
+	_refresh_panel(player)
 
 
 func _update_cursor(cursor: Control, slot: int) -> void:
