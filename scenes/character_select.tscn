@@ -23,29 +23,80 @@ grow_horizontal = 2
 grow_vertical = 2
 glow_strength = 0.6
 
-[node name="Title" type="Label" parent="."]
+[node name="Header" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_top = 40.0
-offset_bottom = 100.0
+offset_top = 24.0
+offset_bottom = 140.0
 grow_horizontal = 2
-theme_type_variation = &"HeaderLabel"
-text = "SELECT YOUR FIGHTER"
-horizontal_alignment = 1
-vertical_alignment = 1
+theme_override_constants/separation = 10
+alignment = 1
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
+[node name="SelectTitle" type="Label" parent="Header"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"SelectTitle"
+text = "SELECT FIGHTER"
+horizontal_alignment = 1
+
+[node name="SubBannerBlock" type="PanelContainer" parent="Header"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"SubBannerBlock"
+
+[node name="SubBanner" type="Label" parent="Header/SubBannerBlock"]
+layout_mode = 2
+theme_type_variation = &"SubBanner"
+text = "◄ CHOOSE YOUR WARRIOR ►"
+horizontal_alignment = 1
+
+[node name="Split" type="HBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 30.0
+offset_top = 176.0
+offset_right = -30.0
+offset_bottom = -220.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 24
+alignment = 1
 
-[node name="SlotsRow" type="HBoxContainer" parent="CenterContainer"]
+[node name="P1Panel" type="PanelContainer" parent="Split"]
+clip_contents = true
 layout_mode = 2
-theme_override_constants/separation = 20
+size_flags_horizontal = 3
+theme_type_variation = &"PreviewPanel"
+
+[node name="VsBadge" type="Label" parent="Split"]
+layout_mode = 2
+size_flags_vertical = 4
+pivot_offset = Vector2(60, 60)
+rotation = -0.105
+theme_type_variation = &"VsBadge"
+text = "VS"
+
+[node name="P2Panel" type="PanelContainer" parent="Split"]
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"PreviewPanel"
+
+[node name="RosterStrip" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -212.0
+offset_bottom = -62.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 16
+alignment = 1
 
 [node name="P1Cursor" type="Panel" parent="."]
 layout_mode = 1
@@ -58,6 +109,7 @@ mouse_filter = 2
 theme_type_variation = &"CursorP2"
 
 [node name="StatusRow" type="HBoxContainer" parent="."]
+visible = false
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0

@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="CharacterData" format=3 uid="uid://dgn8y8o55joce"]
 
-[ext_resource type="Script" path="res://scripts/character/character_data.gd" id="1_qxtw4"]
+[ext_resource type="Script" uid="uid://ba0nhbidowe7b" path="res://scripts/character/character_data.gd" id="1_qxtw4"]
 [ext_resource type="Resource" path="res://characters/jerb/moves/jab.tres" id="2_fast"]
 [ext_resource type="Resource" path="res://characters/jerb/moves/heavy.tres" id="3_heavy"]
 [ext_resource type="Resource" path="res://characters/jerb/moves/skill.tres" id="4_skill"]
@@ -12,12 +12,6 @@
 script = ExtResource("1_qxtw4")
 character_name = "Jerb"
 color = Color(0.86, 0.18, 0.16, 1)
-max_health = 1000
-walk_speed = 5.0
-walk_b_speed = 4.5
-jump_velocity = -13.0
-jump_f_speed = 3.5
-gravity = 0.565
 move_fast = ExtResource("2_fast")
 move_heavy = ExtResource("3_heavy")
 move_skill = ExtResource("4_skill")

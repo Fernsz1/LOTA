@@ -19,7 +19,14 @@ const CAM_HEAD_PAD: float = 110.0    # px above a fighter's feet that must stay 
 const CAM_POS_WEIGHT: float = 0.10   # per-physics-frame smoothing
 const CAM_ZOOM_WEIGHT: float = 0.08
 
+# Skill-move camera punch: a brief, slight extra push-in layered on top of the
+# dynamic zoom above when a fighter's skill (not ultimate — SKILL is a shared
+# FSM state) starts, decaying back out on its own over the following frames.
+const SKILL_ZOOM_PUNCH: float = 0.18    # extra zoom added on the skill's first frame
+const SKILL_ZOOM_DECAY: float = 0.12    # per-physics-frame falloff back to 0
+
 @onready var _overlay: Node = $DebugOverlay
+@onready var _combat_debug: Node = $CombatDebug
 @onready var _p1: CharacterController = $P1
 @onready var _p2: CharacterController = $P2
 @onready var _background: ColorRect = $Background
@@ -32,6 +39,7 @@ const PROJECTILE_SCENE := preload("res://scenes/projectile.tscn")
 var _projectiles: Array[Projectile] = []
 var _throw: ThrowSequencer = null   # 6.4 — the one live throw (only two fighters)
 var _ultimate: UltimateCinematic = null   # 7.3 — the one live cinematic ultimate
+var _zoom_punch: float = 0.0   # current skill-camera-punch bias (see SKILL_ZOOM_PUNCH)
 
 
 func _ready() -> void:
@@ -39,6 +47,13 @@ func _ready() -> void:
 	process_physics_priority = 1
 	# Each input event dispatched immediately — reduces latency on high-Hz displays.
 	Input.use_accumulated_input = false
+	# Both debug overlays (F1 hitboxes, F2 frame/state panel) stay OFF by default
+	# in a real match — forced here rather than trusting only the .tscn's baked
+	# `visible = false`, since CombatDebug's own _ready() reads `visible` to seed
+	# its `_enabled` toggle state; this guarantees both are in sync. The F1/F2
+	# hotkeys still work for dev use — this only affects the default state.
+	_overlay.visible = false
+	_combat_debug.visible = false
 	# Character-select picks (if any) override the .tscn-authored defaults. Absent
 	# when this scene is run directly (e.g. F6 in the editor) — the tscn's own
 	# character_data/box_color still apply in that case.
@@ -77,7 +92,24 @@ func _physics_process(_delta: float) -> void:
 	# the camera itself while live; on release it hands back mid-frame and the
 	# dynamic camera lerps home from wherever the cutscene left it.
 	if _ultimate == null:
+		_update_skill_zoom_punch()
 		_update_camera()
+
+
+# Skill-move camera punch: re-arms to SKILL_ZOOM_PUNCH the instant either fighter's
+# move_skill starts (frame_in_state 0 of the shared SKILL state — checking against
+# move_skill specifically excludes the ultimate, which reuses the same FSM state),
+# then decays back to 0 every other frame. _update_camera() adds this on top of its
+# own distance-based zoom, so the skill gets a slight push-in that eases back out
+# on its own as the punch decays — no separate "zoom out" step needed.
+func _update_skill_zoom_punch() -> void:
+	var skill_started: bool = \
+			(_p1.get_current_move() == _p1.move_skill and _p1.get_frame_in_state() == 0) \
+			or (_p2.get_current_move() == _p2.move_skill and _p2.get_frame_in_state() == 0)
+	if skill_started:
+		_zoom_punch = SKILL_ZOOM_PUNCH
+	else:
+		_zoom_punch = lerpf(_zoom_punch, 0.0, SKILL_ZOOM_DECAY)
 
 
 # Fit-both framing: zoom is derived from the fighters' horizontal gap (plus
@@ -87,7 +119,7 @@ func _physics_process(_delta: float) -> void:
 func _update_camera() -> void:
 	var half_needed: float = absf(_p2.position.x - _p1.position.x) * 0.5 + CAM_MARGIN
 	var z: float = lerpf(_camera.zoom.x,
-			clampf(640.0 / half_needed, 1.0, CAM_MAX_ZOOM), CAM_ZOOM_WEIGHT)
+			clampf(640.0 / half_needed, 1.0, CAM_MAX_ZOOM) + _zoom_punch, CAM_ZOOM_WEIGHT)
 	_camera.zoom = Vector2.ONE * z
 	var half_w: float = 640.0 / z
 	var half_h: float = 360.0 / z

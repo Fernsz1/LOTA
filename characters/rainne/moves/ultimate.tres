@@ -1,23 +1,14 @@
-[gd_resource type="Resource" script_class="MoveData" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="MoveData" format=3 uid="uid://cifgj1g830nlu"]
 
-[ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
+[ext_resource type="Script" uid="uid://c0lpi45l7ci4g" path="res://scripts/combat/move_data.gd" id="1_move"]
 [ext_resource type="Resource" path="res://characters/rainne/projectiles/fireball_super.tres" id="2_proj"]
 
-; Sky Rally (gamePlan.md): cinematic aerial finisher — a takraw juggle ending
-; in a bicycle-kick spike. damage is the cinematic TOTAL and matches the
-; projectile's 140 — same locked balance either way; the projectile itself is
-; the non-cinematic fallback (a start denied by a live throw).
 [resource]
 script = ExtResource("1_move")
 move_name = "rainne_ultimate"
 startup = 9
-active = 1
 recovery = 40
-hitboxes = Array[Rect2]([])
 damage = 140
-hitstun = 0
-blockstun = 0
-hitstop = 0
 projectile = ExtResource("2_proj")
 is_cinematic = true
 cinematic_style = "sky_rally"

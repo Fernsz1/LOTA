@@ -1,19 +1,19 @@
-[gd_resource type="Resource" script_class="MoveData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="MoveData" format=3 uid="uid://ou45h5t2avyy"]
 
-[ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
+[ext_resource type="Script" uid="uid://c0lpi45l7ci4g" path="res://scripts/combat/move_data.gd" id="1_move"]
 
-; Clinch Strike — Jerb's signature dirty boxing move.
 [resource]
 script = ExtResource("1_move")
 move_name = "skill"
 startup = 8
 active = 20
-recovery = 14
-hitboxes = Array[Rect2]([Rect2(-5, -58, 80, 45)])
+recovery = 57
+hitboxes = Array[Rect2]([Rect2(10, -58, 65, 45)])
 damage = 120
 hitstun = 14
 blockstun = 10
 hitstop = 10
 pushback_hit = 8.0
 pushback_block = 12.0
-causes_knockdown = false
+move_velocity = 10.0
+move_velocity_end = 7
