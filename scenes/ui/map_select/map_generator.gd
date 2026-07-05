@@ -104,13 +104,55 @@ static func ring_area(pts: PackedVector2Array) -> float:
 		a += pts[i].x * pts[j].y - pts[j].x * pts[i].y
 	return abs(a) * 0.5
 
+## Shoelace-weighted centroid of one ring. Falls back to vertex mean for
+## degenerate (near-zero-area) rings.
+static func polygon_centroid(pts: PackedVector2Array) -> Vector2:
+	var n := pts.size()
+	if n < 3:
+		return _mean(pts)
+	var a := 0.0
+	var cx := 0.0
+	var cy := 0.0
+	for i in n:
+		var j := (i + 1) % n
+		var cross := pts[i].x * pts[j].y - pts[j].x * pts[i].y
+		a += cross
+		cx += (pts[i].x + pts[j].x) * cross
+		cy += (pts[i].y + pts[j].y) * cross
+	if absf(a) < 0.000001:
+		return _mean(pts)
+	a *= 0.5
+	return Vector2(cx / (6.0 * a), cy / (6.0 * a))
+
+static func _mean(pts: PackedVector2Array) -> Vector2:
+	if pts.is_empty():
+		return Vector2.ZERO
+	var s := Vector2.ZERO
+	for p in pts:
+		s += p
+	return s / pts.size()
+
+## Area-weighted centroid across a region's rings (biggest landmass dominates).
+static func region_centroid(rings: Array) -> Vector2:
+	var total := 0.0
+	var acc := Vector2.ZERO
+	for pts in rings:
+		var area: float = ring_area(pts)
+		acc += polygon_centroid(pts) * area
+		total += area
+	return acc / total if total > 0.0 else Vector2.ZERO
+
 const SOURCE := "res://.local/philippines_optimized.json"
 const VIEW := Vector2(1280, 720)  # match the project's canvas_items base viewport
 const PAD := 60.0
 const MIN_AREA := 8.0        # drop islets smaller than this (projected px^2)
-const OUTLINE_WIDTH := 2.0   # thin graphic-novel stroke
-const SIMPLIFY_EPS := 1.5    # Douglas-Peucker tolerance (projected px); higher = fewer verts
+const TOP_STROKE := 7.0        # top-face ink stroke (graphic-novel)
+const SIDE_STROKE := 9.0       # underside wall stroke
+const SIMPLIFY_EPS := 1.5      # Douglas-Peucker tolerance (projected px)
 const OUTLINE_SHADER := "res://scenes/ui/map_select/outline.gdshader"
+const SIDE_EXTRUDE := Vector2(0.0, 10.0)   # underside wall depth (pre-tilt +Y)
+const SHADOW_OFFSET := Vector2(7.0, 12.0)  # idle hard cast-shadow offset
+const SHADOW_COLOR := Color(4.0 / 255.0, 3.0 / 255.0, 1.0 / 255.0, 0.9)
 
 @export var build_map: bool = false:
 	set(v):
@@ -170,14 +212,14 @@ func build_into(target: Node2D) -> void:
 		_bake_region_into(target, gid, rings_by_region[gid], owner_root)
 
 func _bake_region_into(target: Node2D, gid: String, rings: Array, owner_root: Node) -> void:
-	# Region root is a plain Node2D — hit-testing is done at runtime with
-	# Geometry2D.is_point_in_polygon (map_manager), avoiding CollisionPolygon2D
-	# convex decomposition entirely (fails on self-touching coastline rings).
+	# Region root is a plain Node2D — hit-testing is geometric at runtime
+	# (map_manager), so no CollisionPolygon2D / convex decomposition.
 	var region := Node2D.new()
 	region.name = gid
 	target.add_child(region)
 	if owner_root:
 		region.set_owner(owner_root)
+	region.set_meta("centroid", region_centroid(rings))
 
 	var visual := Node2D.new()
 	visual.name = "Visual"
@@ -185,31 +227,64 @@ func _bake_region_into(target: Node2D, gid: String, rings: Array, owner_root: No
 	if owner_root:
 		visual.set_owner(owner_root)
 
+	var shadow := _layer(visual, "Shadow", owner_root)
+	var underside := _layer(visual, "Underside", owner_root)
+	var top := _layer(visual, "Top", owner_root)
+
 	var shader: Shader = load(OUTLINE_SHADER) if ResourceLoader.exists(OUTLINE_SHADER) else null
+	var base: Color = Data.REGIONS[gid]["base"]
 
 	for pts in rings:
-		# fill
-		var poly := Polygon2D.new()
-		poly.polygon = pts
-		poly.color = Data.BASE_COLOR
-		if shader:
-			var mat := ShaderMaterial.new()
-			mat.shader = shader
-			poly.material = mat
-		visual.add_child(poly)
-		if owner_root:
-			poly.set_owner(owner_root)
-		# ink stroke
-		var line := Line2D.new()
-		var closed := PackedVector2Array(pts)
-		if closed.size() > 0:
-			closed.append(closed[0])
-		line.points = closed
-		line.width = OUTLINE_WIDTH
-		line.default_color = Color.BLACK
-		line.joint_mode = Line2D.LINE_JOINT_ROUND
-		line.begin_cap_mode = Line2D.LINE_CAP_ROUND
-		line.end_cap_mode = Line2D.LINE_CAP_ROUND
-		visual.add_child(line)
-		if owner_root:
-			line.set_owner(owner_root)
+		# 1) hard cast shadow (behind), offset, no stroke
+		_add_poly(shadow, _offset(pts, SHADOW_OFFSET), SHADOW_COLOR, null, owner_root)
+		# 2) underside wall, offset down, dark fill + thick dark stroke
+		var under_pts := _offset(pts, SIDE_EXTRUDE)
+		_add_poly(underside, under_pts, Data.UNDERSIDE, null, owner_root)
+		_add_stroke(underside, under_pts, Data.INK, SIDE_STROKE, owner_root)
+		# 3) top face — the interactive/recolorable layer
+		_add_poly(top, pts, base, shader, owner_root)
+		_add_stroke(top, pts, Data.INK, TOP_STROKE, owner_root)
+
+## Create + own a named Node2D layer under `parent`.
+func _layer(parent: Node2D, layer_name: String, owner_root: Node) -> Node2D:
+	var n := Node2D.new()
+	n.name = layer_name
+	parent.add_child(n)
+	if owner_root:
+		n.set_owner(owner_root)
+	return n
+
+static func _offset(pts: PackedVector2Array, d: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for p in pts:
+		out.append(p + d)
+	return out
+
+func _add_poly(parent: Node2D, pts: PackedVector2Array, color: Color,
+		shader: Shader, owner_root: Node) -> void:
+	var poly := Polygon2D.new()
+	poly.polygon = pts
+	poly.color = color
+	if shader:
+		var mat := ShaderMaterial.new()
+		mat.shader = shader
+		poly.material = mat
+	parent.add_child(poly)
+	if owner_root:
+		poly.set_owner(owner_root)
+
+func _add_stroke(parent: Node2D, pts: PackedVector2Array, color: Color,
+		width: float, owner_root: Node) -> void:
+	var line := Line2D.new()
+	var closed := PackedVector2Array(pts)
+	if closed.size() > 0:
+		closed.append(closed[0])
+	line.points = closed
+	line.width = width
+	line.default_color = color
+	line.joint_mode = Line2D.LINE_JOINT_ROUND
+	line.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	line.end_cap_mode = Line2D.LINE_CAP_ROUND
+	parent.add_child(line)
+	if owner_root:
+		line.set_owner(owner_root)

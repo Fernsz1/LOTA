@@ -31,33 +31,44 @@ func _init() -> void:
 	for gid in Data.REGIONS:
 		ok(region_names.has(gid), "region baked: " + gid)
 
-	# each region has a Visual node + >=1 Polygon2D + >=1 Line2D; NO CollisionPolygon2D
-	# (hit-testing is point-in-polygon at runtime, not Area2D collision)
+	# each region: Visual/{Shadow,Underside,Top}; Top has >=1 Polygon2D + >=1 Line2D;
+	# NO CollisionPolygon2D anywhere; region has a "centroid" metadata Vector2.
 	for gid in region_names:
 		var region: Node2D = region_names[gid]
 		var visual := region.get_node_or_null("Visual")
 		ok(visual != null, gid + " has Visual node")
-		var polys := 0
-		var lines := 0
-		if visual:
-			for v in visual.get_children():
-				if v is Polygon2D: polys += 1
-				elif v is Line2D: lines += 1
+		var top := region.get_node_or_null("Visual/Top")
+		var underside := region.get_node_or_null("Visual/Underside")
+		var shadow := region.get_node_or_null("Visual/Shadow")
+		ok(top != null, gid + " has Visual/Top")
+		ok(underside != null, gid + " has Visual/Underside")
+		ok(shadow != null, gid + " has Visual/Shadow")
+		var top_polys := 0
+		var top_lines := 0
+		if top:
+			for v in top.get_children():
+				if v is Polygon2D: top_polys += 1
+				elif v is Line2D: top_lines += 1
+		ok(top_polys >= 1, gid + " Top has >=1 Polygon2D (got %d)" % top_polys)
+		ok(top_lines >= 1, gid + " Top has >=1 Line2D (got %d)" % top_lines)
 		var cols := 0
 		for a in region.get_children():
 			if a is CollisionPolygon2D: cols += 1
-		ok(polys >= 1, gid + " has >=1 Polygon2D (got %d)" % polys)
-		ok(lines >= 1, gid + " has >=1 Line2D (got %d)" % lines)
-		ok(cols == 0, gid + " has no CollisionPolygon2D (got %d)" % cols)
+		ok(cols == 0, gid + " has no CollisionPolygon2D")
+		ok(region.has_meta("centroid"), gid + " stores centroid meta")
+		if region.has_meta("centroid"):
+			ok(region.get_meta("centroid") is Vector2, gid + " centroid is Vector2")
 
-	# base fill color applied
-	var first: Node2D = region_names[region_names.keys()[0]]
+	# top-face fill uses the region's own base color
+	var vis_region: Node2D = region_names["Visayas"]
+	var vis_top: Node2D = vis_region.get_node("Visual/Top")
 	var poly0: Polygon2D = null
-	for v in first.get_node("Visual").get_children():
+	for v in vis_top.get_children():
 		if v is Polygon2D:
 			poly0 = v
 			break
-	ok(poly0 != null and poly0.color == Data.BASE_COLOR, "base slate fill applied")
+	ok(poly0 != null and poly0.color == Data.REGIONS["Visayas"]["base"],
+		"Visayas top face uses its base color")
 
 	# clear() removes them (idempotent)
 	root.clear()
