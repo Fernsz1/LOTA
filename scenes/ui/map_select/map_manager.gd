@@ -135,9 +135,15 @@ func _select(region: Node2D) -> void:
 	var ms: Node = main_loop.root.get_node_or_null("MatchSelection") if main_loop else null
 	if ms and ResourceLoader.exists(stage_path):
 		ms.stage_data = load(stage_path)
+	# 7.5 — training enters this flow from the TRAINING menu item (character
+	# select → map select): cut straight to the training scene, skipping the
+	# loading-screen → intro → match pipeline. Otherwise start the match.
+	var next_scene := "res://scenes/loading_screen.tscn"
+	if ms and ms.training:
+		next_scene = "res://scenes/training.tscn"
 	# Guard scene switch so headless --script tests don't navigate away.
 	if not Engine.is_editor_hint() and main_loop and main_loop.current_scene != null:
-		main_loop.change_scene_to_file("res://scenes/loading_screen.tscn")
+		main_loop.change_scene_to_file(next_scene)
 
 func _set_label(text: String) -> void:
 	if label_path.is_empty():

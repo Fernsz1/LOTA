@@ -44,8 +44,8 @@ func _on_play_pressed() -> void:
 
 
 func _on_training_pressed() -> void:
-	# 7.5 — training now shares the versus select flow (character → stage);
-	# the flag makes stage_select cut to training.tscn instead of the match.
+	# 7.5/7.6 — training now shares the versus select flow (character → map);
+	# the flag makes map select cut to training.tscn instead of the match.
 	# Name entry is skipped: training has no leaderboard.
 	MatchSelection.training = true
 	get_tree().change_scene_to_file("res://scenes/character_select.tscn")
