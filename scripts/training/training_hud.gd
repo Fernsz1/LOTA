@@ -1,64 +1,29 @@
 class_name TrainingHUD
 extends CanvasLayer
-## 4.1/4.2 — Training mode HUD.
-## Health bars (4.1), frame advantage on hit/block, and live move readout (4.2).
+## 4.2/7.5 — Training extras over the match HUD. The shared match frame (the
+## two HUMANS' portraits, names, health bars, meters) comes from a MatchHUD
+## instance in the scene. Each side's DUMMY gets a compact block tucked right
+## under its player's meter, styled like a shrunken player plate: the Bangers
+## name treatment and the same health track/fill art, recolored orange through
+## the hud_recolor shader (both baked in training_hud.tscn). A slim bottom
+## strip carries the live move readout, frame advantage, and hotkey hints.
+## Sits on layer 2 so it stacks above the match HUD (layer 1).
 
-const BAR_W: float = 480.0
 const ADVANTAGE_DISPLAY_TIME: float = 3.0   # seconds before advantage label clears
 
-@onready var _p1_fill: ColorRect = $P1Bar/Fill
-@onready var _p1d_fill: ColorRect = $P1DummyBar/Fill
-@onready var _p2d_fill: ColorRect = $P2DummyBar/Fill
-@onready var _p2_fill: ColorRect = $P2Bar/Fill
-@onready var _p1_info: Label = $P1Info
-@onready var _p1_dummy_info: Label = $P1DummyInfo
-@onready var _p2_dummy_info: Label = $P2DummyInfo
-@onready var _p2_info: Label = $P2Info
-@onready var _p1_move_lbl: Label = $P1MoveReadout
-@onready var _p2_move_lbl: Label = $P2MoveReadout
-@onready var _p1_adv_lbl: Label = $P1Advantage
-@onready var _p2_adv_lbl: Label = $P2Advantage
+@onready var _move_lbl := {1: $Strip/Row/Left/MoveReadout, 2: $Strip/Row/Right/MoveReadout}
+@onready var _adv_lbl := {1: $Strip/Row/Left/Advantage, 2: $Strip/Row/Right/Advantage}
+@onready var _dummy_status := {1: $P1Dummy/Status, 2: $P2Dummy/Status}
+@onready var _dummy_bar := {1: $P1Dummy/Bar, 2: $P2Dummy/Bar}
 
-var _p1_adv_timer: float = 0.0
-var _p2_adv_timer: float = 0.0
+var _adv_timer := {1: 0.0, 2: 0.0}
+var _player_infinite := {1: false, 2: false}
 
 
-## idx: 1=P1, 2=P1Dummy, 3=P2Dummy, 4=P2.
-func set_health(idx: int, frac: float) -> void:
-	var w: float = BAR_W * clampf(frac, 0.0, 1.0)
-	match idx:
-		1:
-			_p1_fill.size.x = w
-		2:
-			_p1d_fill.size.x = w
-		3:
-			_p2d_fill.size.x = w
-			_p2d_fill.position.x = BAR_W - w
-		4:
-			_p2_fill.size.x = w
-			_p2_fill.position.x = BAR_W - w
-
-
-func set_player_info(player_idx: int, infinite: bool) -> void:
-	var text: String = "P%d: %s" % [player_idx, "♥INF" if infinite else ""]
-	if player_idx == 1:
-		_p1_info.text = text
-	else:
-		_p2_info.text = text
-
-
-func set_dummy_info(dummy_idx: int, mode_label: String, infinite: bool) -> void:
-	var inf: String = "  ♥INF" if infinite else ""
-	if dummy_idx == 1:
-		_p1_dummy_info.text = "P1Dummy: %s%s" % [mode_label, inf]
-	else:
-		_p2_dummy_info.text = "P2Dummy: %s%s" % [mode_label, inf]
-
-
-## 4.2 — Live move readout: shows move name, frame data, and current phase.
+## 4.2 — Live move readout: move name, frame data, and current phase.
 ## side: 1=P1 (left), 2=P2 (right). move may be null when no attack is active.
 func set_move_readout(side: int, move: MoveData, fis: int) -> void:
-	var lbl: Label = _p1_move_lbl if side == 1 else _p2_move_lbl
+	var lbl: Label = _move_lbl[side]
 	if move == null:
 		lbl.text = ""
 		return
@@ -79,10 +44,10 @@ func set_move_readout(side: int, move: MoveData, fis: int) -> void:
 	lbl.add_theme_color_override("font_color", col)
 
 
-## 4.2 — Show frame advantage after a hit or block. Positive = attacker advantage.
-## Clears automatically after ADVANTAGE_DISPLAY_TIME seconds.
+## 4.2 — Frame advantage after a hit or block. Positive = attacker acts first.
+## side is the ARENA (1 = left, 2 = right). Auto-clears after a few seconds.
 func show_advantage(side: int, adv: int) -> void:
-	var lbl: Label = _p1_adv_lbl if side == 1 else _p2_adv_lbl
+	var lbl: Label = _adv_lbl[side]
 	var sign_str: String = "+" if adv > 0 else ""
 	lbl.text = "adv: %s%d" % [sign_str, adv]
 	var col: Color
@@ -93,18 +58,35 @@ func show_advantage(side: int, adv: int) -> void:
 	else:
 		col = Color(0.85, 0.85, 0.85, 1)      # white — neutral
 	lbl.add_theme_color_override("font_color", col)
-	if side == 1:
-		_p1_adv_timer = ADVANTAGE_DISPLAY_TIME
-	else:
-		_p2_adv_timer = ADVANTAGE_DISPLAY_TIME
+	_adv_timer[side] = ADVANTAGE_DISPLAY_TIME
+
+
+func set_dummy_status(side: int, mode_label: String, infinite: bool) -> void:
+	_dummy_status[side].text = "DUMMY · %s%s%s" % [
+		mode_label,
+		"  ♥INF" if infinite else "",
+		"    P%d ♥INF" % side if _player_infinite[side] else "",
+	]
+
+
+func set_player_status(side: int, infinite: bool) -> void:
+	# Folded into the dummy-status line to keep the block compact; remember it
+	# so the next set_dummy_status doesn't drop the flag.
+	_player_infinite[side] = infinite
+	var cur: String = _dummy_status[side].text
+	var base: String = cur.split("    ")[0]
+	_dummy_status[side].text = base + ("    P%d ♥INF" % side if infinite else "")
+
+
+## Compact HP bar for each side's dummy — the match health-bar art in
+## miniature (P2's fill_mode mirrors the match HUD's inner-edge depletion).
+func set_dummy_health(side: int, frac: float) -> void:
+	_dummy_bar[side].value = clampf(frac, 0.0, 1.0) * 100.0
 
 
 func _process(delta: float) -> void:
-	if _p1_adv_timer > 0.0:
-		_p1_adv_timer -= delta
-		if _p1_adv_timer <= 0.0:
-			_p1_adv_lbl.text = ""
-	if _p2_adv_timer > 0.0:
-		_p2_adv_timer -= delta
-		if _p2_adv_timer <= 0.0:
-			_p2_adv_lbl.text = ""
+	for side in [1, 2]:
+		if _adv_timer[side] > 0.0:
+			_adv_timer[side] -= delta
+			if _adv_timer[side] <= 0.0:
+				_adv_lbl[side].text = ""

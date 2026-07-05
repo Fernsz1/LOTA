@@ -5,7 +5,7 @@
 ; Sikaran Barrage (gamePlan.md): invulnerable lunging rushdown finisher.
 ; Played as a "blitz" cutscene in versus (7.3); damage is the cinematic TOTAL
 ; across the scripted kicks. The strike itself (with its invuln startup and
-; forward momentum) is the non-cinematic fallback (training mode).
+; forward momentum) is the non-cinematic fallback (a denied start).
 [resource]
 script = ExtResource("1_move")
 move_name = "sofia_ultimate"

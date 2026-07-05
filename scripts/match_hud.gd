@@ -198,6 +198,17 @@ func set_fighter(player: int, fighter_name: String, color: Color) -> void:
 func set_round(n: int) -> void:
 	_round.text = "ROUND %d" % n
 
+## 7.5 — training mode reuses this HUD for the shared match frame (portraits,
+## names, health bars, meters) so both modes look identical; rounds and the
+## match clock don't exist there, so hide that chrome. Announce stays: it's
+## harmless while unused and available for future training callouts.
+func configure_for_training() -> void:
+	_timer.get_parent().visible = false   # the TimerPlate holding the clock
+	_round.visible = false
+	for p in [1, 2]:
+		for pip in _pips[p]:
+			pip.visible = false
+
 func announce(text: String) -> void:
 	_announce.text = text
 
