@@ -27,6 +27,18 @@ const STYLE_TAGS := {
 const GENERIC_TAG := "FIGHTER"
 const LOCKED_TAG := "COMING SOON"
 
+# Short lore/playstyle blurb shown under each fighter's name in the preview panel
+# (UI copy, so it lives here alongside STYLE_TAGS rather than in CharacterData).
+const DESCRIPTIONS := {
+	"jerb": "A disciplined boxer with no glaring weakness. Rewards clean fundamentals and relentless pressure.",
+	"rainne": "Explosive striker who turns the smallest opening into damage with fast, punishing combos.",
+	"luis": "Master of the rattan sticks. Controls mid-range with precise strikes and lethal counters.",
+	"sofia": "Agile and explosive. Uses fast kicks, footwork, and combinations to overwhelm foes.",
+	"jacob": "Overpowering grappler. Closes the gap, clinches, and ends the fight up close.",
+}
+const GENERIC_DESC := "A seasoned brawler ready to prove themselves in the arena."
+const LOCKED_DESC := "A mysterious challenger, yet to step into the light."
+
 const SLOT_SIZE := Vector2(212, 150)
 const CURSOR_MARGIN := 6.0
 
@@ -320,32 +332,6 @@ func _refresh_panel(player: int) -> void:
 		mystery.add_theme_color_override("font_color", Color(0.604, 0.561, 0.478, 0.6))
 		root.add_child(mystery)
 
-	# giant vertical short name down the near side, one Label per letter in a
-	# top-aligned VBox so tall Bebas metrics never clip the first glyph
-	var name_text: String = slot["name"]
-	var vlen: int = max(name_text.length(), 1)
-	var vfont: int = int(clamp(180.0 / vlen, 20.0, 42.0))
-	var vbox := VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.offset_top = 56.0  # clear the P# corner badge above
-	vbox.offset_bottom = -90.0
-	vbox.offset_left = 14.0
-	vbox.offset_right = -14.0
-	vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
-	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	vbox.add_theme_constant_override("separation", int(-vfont * 0.25))
-	for i in name_text.length():
-		var letter := Label.new()
-		letter.text = name_text[i]
-		letter.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if player == 1 else HORIZONTAL_ALIGNMENT_RIGHT
-		letter.add_theme_font_override("font", BEBAS)
-		letter.add_theme_font_size_override("font_size", vfont)
-		letter.add_theme_color_override("font_color", badge_color)
-		letter.add_theme_color_override("font_outline_color", INK)
-		letter.add_theme_constant_override("outline_size", 6)
-		vbox.add_child(letter)
-	root.add_child(vbox)
-
 	# bottom info block (fixed-height bar; root is a plain Control so anchors alone
 	# would collapse a PanelContainer to zero height — reserve the rect explicitly)
 	var info := PanelContainer.new()
@@ -355,10 +341,13 @@ func _refresh_panel(player: int) -> void:
 	info.anchor_top = 1.0
 	info.anchor_bottom = 1.0
 	info.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	info.offset_top = -84.0
+	info.offset_top = -122.0
 	info.offset_bottom = 0.0
 	info.add_theme_stylebox_override("panel", _info_stylebox(badge_color))
 	root.add_child(info)
+
+	# P1 reads left-aligned, P2 mirrors to the right.
+	var align := HORIZONTAL_ALIGNMENT_LEFT if player == 1 else HORIZONTAL_ALIGNMENT_RIGHT
 
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 2)
@@ -366,6 +355,7 @@ func _refresh_panel(player: int) -> void:
 
 	var name_label := Label.new()
 	name_label.text = slot["name"]
+	name_label.horizontal_alignment = align
 	name_label.add_theme_font_override("font", BEBAS)
 	name_label.add_theme_font_size_override("font_size", 34)
 	name_label.add_theme_color_override("font_color", BONE)
@@ -373,9 +363,18 @@ func _refresh_panel(player: int) -> void:
 
 	var tag_label := Label.new()
 	tag_label.text = slot["tag"]
+	tag_label.horizontal_alignment = align
 	tag_label.add_theme_font_size_override("font_size", 14)
 	tag_label.add_theme_color_override("font_color", badge_color)
 	box.add_child(tag_label)
+
+	var desc_label := Label.new()
+	desc_label.text = LOCKED_DESC if is_stub else DESCRIPTIONS.get(slot["id"], GENERIC_DESC)
+	desc_label.horizontal_alignment = align
+	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc_label.add_theme_font_size_override("font_size", 13)
+	desc_label.add_theme_color_override("font_color", MUTED)
+	box.add_child(desc_label)
 
 	# P# // READY|LOCKED corner badge
 	var badge := Label.new()
