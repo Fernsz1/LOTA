@@ -9,7 +9,10 @@ uniform vec4 outline_color : source_color = vec4(0.0, 0.0, 0.0, 1.0);
 void fragment() {
 	vec4 tex = texture(TEXTURE, UV);
 	if (tex.a > 0.5) {
-		COLOR = tex;
+		// Respect the node's modulate/vertex color so solid (untextured)
+		// Polygon2D fills keep their base slate / hover neon color instead of
+		// rendering as the built-in white texture.
+		COLOR = tex * COLOR;
 	} else {
 		vec2 px = TEXTURE_PIXEL_SIZE * outline_width;
 		float hit = 0.0;
