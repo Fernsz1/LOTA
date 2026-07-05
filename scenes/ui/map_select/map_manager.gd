@@ -2,7 +2,10 @@ extends Node2D
 ## Runtime controller for the Map Select screen (MapRoot). Also the single source
 ## of truth for region grouping + metadata, read by the @tool map_generator.gd.
 
-const BASE_COLOR := Color("#343d46")
+## Shared ink + underside tokens (also read by the @tool generator).
+const INK := Color("#0a0904")
+const UNDERSIDE := Color("#2a2612")
+const BASE_COLOR := Color("#343d46")  # TEMPORARY — old hover block still refs it; removed in Task 6
 
 ## adm1_pcode -> macro-region id. Verified against .local/philippines_optimized.json.
 const GROUPS := {
@@ -14,24 +17,49 @@ const GROUPS := {
 	"PH12": "Mindanao", "PH16": "Mindanao", "PH19": "Mindanao",
 }
 
-## macro-region id -> display name, stage StageData resource, hover neon color.
+## macro-region id -> full hi-fi metadata. THE single source of truth (generator,
+## UI, and markers all read this). Stage mapping matches the handoff table exactly.
 const REGIONS := {
-	"NorthernLuzon": {"display": "Northern Luzon",
+	"NorthernLuzon": {
+		"index": 1, "display": "NORTHERN LUZON",
+		"base": Color("#3f6f92"), "neon": Color("#34b0ff"), "neon_stroke": Color("#bfe6ff"),
+		"fighter": "BUNO",
 		"stage": "res://stages/mountain_festival/mountain_festival_data.tres",
-		"neon": Color("#ffd700")},
-	"CentralLuzon": {"display": "Central Luzon",
-		"stage": "res://stages/heritage_plaza/heritage_plaza_data.tres",
-		"neon": Color("#8a2be2")},
-	"SouthernLuzon": {"display": "Southern Luzon",
-		"stage": "res://stages/bahay_kubo/bahay_kubo_data.tres",
-		"neon": Color("#ff2d55")},
-	"Visayas": {"display": "Visayas",
-		"stage": "res://stages/beach_court/beach_court_data.tres",
-		"neon": Color("#00e5ff")},
-	"Mindanao": {"display": "Mindanao",
+		"stage_label": "MOUNTAIN FESTIVAL GROUNDS",
+		"story": "Highland grapplers forged in the festivals of the Cordillera ranges."},
+	"CentralLuzon": {
+		"index": 2, "display": "CENTRAL LUZON",
+		"base": Color("#a8432f"), "neon": Color("#ff5a3c"), "neon_stroke": Color("#ffc7ba"),
+		"fighter": "DIRTY BOXING",
 		"stage": "res://stages/barangay_ring/barangay_ring_data.tres",
-		"neon": Color("#39ff14")},
+		"stage_label": "BARANGAY BOXING RING",
+		"story": "Street-hardened brawlers trading blows in the barangay rings."},
+	"SouthernLuzon": {
+		"index": 3, "display": "SOUTHERN LUZON",
+		"base": Color("#5c8038"), "neon": Color("#84e23c"), "neon_stroke": Color("#d9ffb2"),
+		"fighter": "ARNIS",
+		"stage": "res://stages/bahay_kubo/bahay_kubo_data.tres",
+		"stage_label": "BAHAY KUBO TRAINING YARD",
+		"story": "Stick-and-blade masters drilling in the southern training yards."},
+	"Visayas": {
+		"index": 4, "display": "VISAYAS",
+		"base": Color("#6b4a9c"), "neon": Color("#b154ff"), "neon_stroke": Color("#e2c2ff"),
+		"fighter": "SIKARAN",
+		"stage": "res://stages/heritage_plaza/heritage_plaza_data.tres",
+		"stage_label": "HERITAGE PLAZA",
+		"story": "Sikaran was born from freedom and resilience in the island heartland."},
+	"Mindanao": {
+		"index": 5, "display": "MINDANAO",
+		"base": Color("#c0982f"), "neon": Color("#ffd23a"), "neon_stroke": Color("#fff1b0"),
+		"fighter": "SEPAK TAKRAW",
+		"stage": "res://stages/beach_court/beach_court_data.tres",
+		"stage_label": "BEACH COURT AT DUSK",
+		"story": "Airborne acrobats who settle every score on the dusk-lit shore."},
 }
+
+## Region ids in index order (1..5) — stable iteration + labeling.
+const REGION_ORDER: Array[String] = [
+	"NorthernLuzon", "CentralLuzon", "SouthernLuzon", "Visayas", "Mindanao"]
 
 signal region_selected(region_name: String, stage_name: String)
 
