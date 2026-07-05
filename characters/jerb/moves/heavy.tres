@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="MoveData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="MoveData" format=3 uid="uid://cr4y4it7nk3pw"]
 
-[ext_resource type="Script" path="res://scripts/combat/move_data.gd" id="1_move"]
+[ext_resource type="Script" uid="uid://c0lpi45l7ci4g" path="res://scripts/combat/move_data.gd" id="1_move"]
 
 [resource]
 script = ExtResource("1_move")
@@ -8,7 +8,7 @@ move_name = "heavy"
 startup = 10
 active = 4
 recovery = 19
-hitboxes = Array[Rect2]([Rect2(-10, -60, 55, 30)])
+hitboxes = Array[Rect2]([Rect2(-10, -60, 75, 30)])
 damage = 120
 hitstun = 21
 blockstun = 16

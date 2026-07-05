@@ -7,6 +7,7 @@ extends Node2D
 # --- Movement constants (px/frame or frames; tune at 3.6 GO/NO-GO) ---
 const WALK_SPEED: float = 5.0
 const WALK_B_SPEED: float = 4.5       # slower than walk forward
+const WALK_STEP_FRAMES: int = 14      # one discrete step per press (~half a dash), not a continuous hold
 const JUMP_VELOCITY: float = -13.0    # up is negative in Godot 2D
 const GRAVITY: float = 0.565          # → ~46-frame airtime (feel-reference §5)
 const JUMP_F_SPEED: float = 3.5       # horizontal speed on forward/back jump
@@ -42,6 +43,9 @@ var _dash_speed: float = DASH_SPEED
 var _dash_frames: int = DASH_TOTAL
 var _backdash_speed: float = BACKDASH_SPEED
 var _backdash_frames: int = BACKDASH_TOTAL
+var _sprite_flip_offset: float = 0.0
+var _base_sprite_x: float = 0.0
+var _base_sprite_y: float = 0.0
 
 var _fsm: CharacterStateMachine = CharacterStateMachine.new()
 var _vel: Vector2 = Vector2.ZERO
@@ -59,6 +63,9 @@ var _prev_bwd: bool = false
 const MAX_HEALTH: int = 1000
 const ATTACK_BUFFER: int = 4          # frames of input buffer on attack press (feel-reference §4)
 const KNOCKDOWN_FRAMES: int = 80      # time face-down before getup (2.5)
+const ULTIMATE_KNOCKDOWN_FRAMES: int = 200 # longer time face-down after a cinematic ultimate finisher
+const KNOCKDOWN_ROTATE_FRAMES: int = 24   # arc from upright to horizontal takes this long
+const KNOCKDOWN_ARC_HEIGHT: float = 40.0  # px risen at the arc's midpoint (thrown-back hop)
 const GETUP_FRAMES: int = 16          # wake-up; invulnerable throughout (2.5)
 const JUGGLE_DECAY: float = 0.8       # 3.5: hitstun multiplier per subsequent airborne hit
 const PUSHBACK_DECAY: float = 0.85    # per-frame pushback falloff (2.4 — blockstrings self-space)
@@ -74,11 +81,13 @@ var _projectile_spawned_this_move: bool = false   # 3.2: one projectile per atta
 var _juggle_count: int = 0   # 3.5: airborne hits accumulated this combo; resets on landing
 var _air_attack_used: bool = false   # one air attack per jump; cleared on landing / fresh jump
 var _cinematic_locked: bool = false   # 7.3: UltimateCinematic owns this fighter while set
+var _ultimate_knockdown: bool = false # this KNOCKDOWN came from a cinematic finisher → longer GETUP
 signal projectile_requested(data: ProjectileData, origin: Vector2, facing: int)
 
 var _overlay: Node = null
 
 @onready var _box: ColorRect = $Box
+@onready var _sprite: AnimatedSprite2D = get_node_or_null("AnimatedSprite2D")
 
 
 func setup(floor_y: float, left_x: float, right_x: float, overlay: Node) -> void:
@@ -93,6 +102,14 @@ func _ready() -> void:
 	_apply_character_data()
 	health = _max_health   # 6.3: the field initializer ran before stats loaded; seed from the real max
 	_box.color = box_color
+	
+	if _sprite != null:
+		_base_sprite_x = _sprite.position.x
+		_base_sprite_y = _sprite.position.y
+		_fsm.state_changed.connect(_on_state_changed)
+		# Manually trigger the first animation update
+		_on_state_changed(0, _fsm.state)
+
 	# Validate frame data on load (conventions: validate with assert/push_error).
 	for m in [move_fast, move_heavy, move_skill, move_ultimate, move_air_fast, move_air_heavy]:
 		if m != null:
@@ -134,6 +151,7 @@ func _apply_character_data() -> void:
 	_dash_frames = character_data.dash_frames
 	_backdash_speed = character_data.backdash_speed
 	_backdash_frames = character_data.backdash_frames
+	_sprite_flip_offset = character_data.sprite_flip_offset
 	if character_data.max_health > 0:
 		_max_health = character_data.max_health
 
@@ -148,6 +166,12 @@ func _physics_process(_delta: float) -> void:
 	if _hitstop > 0:
 		_hitstop -= 1
 		return
+
+	if _sprite != null:
+		_sprite.flip_h = (facing == -1)
+		_sprite.position.x = _base_sprite_x + (_sprite_flip_offset if facing == -1 else 0.0)
+		_update_knockdown_rotation()
+
 	var buf: InputBuffer = InputManager.get_buffer(player_index)
 	_resolve_busy_exits(buf)
 	_process_input(buf)
@@ -159,9 +183,14 @@ func _physics_process(_delta: float) -> void:
 
 
 # Busy states that exit on frame count: JUMP_START → air, JUMP_LAND → IDLE,
-# DASH/BACKDASH → IDLE. Called before input so the new state is seen immediately.
+# DASH/BACKDASH → IDLE, WALK_F/WALK_B → IDLE (one fixed-distance step per press,
+# not a continuous hold — see WALK_STEP_FRAMES). Called before input so the new
+# state is seen immediately.
 func _resolve_busy_exits(buf: InputBuffer) -> void:
 	match _fsm.state:
+		CharacterStateMachine.State.WALK_F, CharacterStateMachine.State.WALK_B:
+			if _fsm.frame_in_state >= WALK_STEP_FRAMES:
+				_fsm.request(CharacterStateMachine.State.IDLE)
 		CharacterStateMachine.State.JUMP_START:
 			if _fsm.frame_in_state >= JUMPSQUAT_FRAMES:
 				var fwd_bit: int = InputBuffer.RIGHT if facing > 0 else InputBuffer.LEFT
@@ -212,10 +241,14 @@ func _resolve_busy_exits(buf: InputBuffer) -> void:
 				else:
 					_fsm.request(CharacterStateMachine.State.IDLE)
 		CharacterStateMachine.State.KNOCKDOWN:
-			if _fsm.frame_in_state >= KNOCKDOWN_FRAMES and position.y >= _floor_y:
+			# Longer time face-down after a cinematic finisher (_ultimate_knockdown);
+			# the wake-up itself (GETUP below) is the normal length either way.
+			var kd_frames: int = ULTIMATE_KNOCKDOWN_FRAMES if _ultimate_knockdown else KNOCKDOWN_FRAMES
+			if _fsm.frame_in_state >= kd_frames and position.y >= _floor_y:
+				_ultimate_knockdown = false   # consumed — GETUP always plays at normal length
 				_fsm.request(CharacterStateMachine.State.GETUP)
 		CharacterStateMachine.State.GETUP:
-			if _fsm.frame_in_state >= GETUP_FRAMES:         # 2.5 (invuln window)
+			if _fsm.frame_in_state >= GETUP_FRAMES:          # 2.5 (invuln window)
 				_fsm.request(CharacterStateMachine.State.IDLE)
 
 
@@ -269,20 +302,26 @@ func _process_input(buf: InputBuffer) -> void:
 	# On a successful start, arm the move and clear the one-hit latch.
 	# NOTE: Treating ultimate as a second SKILL slot to avoid changing FSM structure (Phase 3.1 constraint).
 	# 6.4: a slot whose move is_grab enters GRAB_ATTEMPT instead (grapplers put grabs on SKILL/ULT).
+	# Armed BEFORE request(): request() emits state_changed synchronously, and
+	# _on_state_changed reads _current_move to pick the animation (e.g. SKILL is
+	# shared with the ultimate) — arming after would leave it reading the PREVIOUS
+	# move for that one signal, only happening to look right when the same move
+	# was used twice in a row. is_actionable() above guarantees these requests
+	# succeed, so arming first here is safe.
 	if move_ultimate != null and _meter.is_full() \
-			and buf.pressed_within(InputBuffer.ULTIMATE, ATTACK_BUFFER) \
-			and _fsm.request(_attack_state_for(move_ultimate, CharacterStateMachine.State.SKILL)):
+			and buf.pressed_within(InputBuffer.ULTIMATE, ATTACK_BUFFER):
 		_arm(move_ultimate)
-		_meter.consume()   # spent the moment the move starts — blocked/whiffed is still spent
-		return
-	if move_heavy != null and buf.pressed_within(InputBuffer.HEAVY, ATTACK_BUFFER) \
-			and _fsm.request(_attack_state_for(move_heavy, CharacterStateMachine.State.HEAVY_ATTACK)):
+		if _fsm.request(_attack_state_for(move_ultimate, CharacterStateMachine.State.SKILL)):
+			_meter.consume()   # spent the moment the move starts — blocked/whiffed is still spent
+			return
+	if move_heavy != null and buf.pressed_within(InputBuffer.HEAVY, ATTACK_BUFFER):
 		_arm(move_heavy)
-		return
-	if move_skill != null and buf.pressed_within(InputBuffer.SKILL, ATTACK_BUFFER) \
-			and _fsm.request(_attack_state_for(move_skill, CharacterStateMachine.State.SKILL)):
+		if _fsm.request(_attack_state_for(move_heavy, CharacterStateMachine.State.HEAVY_ATTACK)):
+			return
+	if move_skill != null and buf.pressed_within(InputBuffer.SKILL, ATTACK_BUFFER):
 		_arm(move_skill)
-		return
+		if _fsm.request(_attack_state_for(move_skill, CharacterStateMachine.State.SKILL)):
+			return
 	if move_fast != null and buf.pressed_within(InputBuffer.FAST, ATTACK_BUFFER) \
 			and _fsm.request(CharacterStateMachine.State.FAST_ATTACK):
 		_arm(move_fast)
@@ -313,11 +352,15 @@ func _process_input(buf: InputBuffer) -> void:
 			_air_attack_used = false
 	elif down_held:
 		_fsm.request(CharacterStateMachine.State.CROUCH)
-	elif fwd_held:
+	elif fwd_rising:
+		# One fixed-distance step per press (WALK_STEP_FRAMES), not a continuous
+		# hold — holding forward without releasing does not re-trigger another
+		# step; the busy-exit above returns to IDLE on its own timer regardless
+		# of whether the button is still down.
 		_fsm.request(CharacterStateMachine.State.WALK_F)
-	elif bwd_held:
+	elif bwd_rising:
 		_fsm.request(CharacterStateMachine.State.WALK_B)
-	else:
+	elif not fwd_held and not bwd_held:
 		_fsm.request(CharacterStateMachine.State.IDLE)
 
 
@@ -470,8 +513,11 @@ func _try_cancel_input(buf: InputBuffer) -> void:
 
 func _cancel_into(target: CharacterStateMachine.State, move: MoveData) -> void:
 	_fsm.request(CharacterStateMachine.State.IDLE)
-	if _fsm.request(target):
-		_arm(move)
+	# Armed BEFORE request(): see the same-shaped fix/comment in _process_input —
+	# _on_state_changed reads _current_move synchronously off this request().
+	_arm(move)
+	if not _fsm.request(target):
+		_current_move = null   # didn't actually start; don't leave a stale arm behind
 
 
 ## 3.2 — emit a spawn request on the move's projectile_spawn_at() frame, once.
@@ -525,11 +571,19 @@ func get_frame_in_state() -> int:
 func is_frozen() -> bool:
 	return _hitstop > 0 or _cinematic_locked
 
-## Invulnerable on wake-up (GETUP), when KO'd, while held in a throw (GRABBED, 6.4),
-## or during a move's startup-invuln window (3.4).
+## Invulnerable while down (KNOCKDOWN — no OTG) or on wake-up (GETUP), when
+## KO'd, while held in a throw (GRABBED, 6.4), or during a move's
+## startup-invuln window (3.4).
+##
+## KNOCKDOWN matters beyond fairness: without it, a hit landing before GETUP
+## force()-restarts KNOCKDOWN fresh (force() bypasses can_transition, so this
+## was always legal) and, since apply_hit()/apply_throw() clear
+## _ultimate_knockdown for a fresh knockdown, would silently wipe the longer
+## post-ultimate getup before GETUP is ever reached.
 func is_invulnerable() -> bool:
 	if _fsm.state == CharacterStateMachine.State.GETUP or _fsm.state == CharacterStateMachine.State.KO \
-			or _fsm.state == CharacterStateMachine.State.GRABBED:
+			or _fsm.state == CharacterStateMachine.State.GRABBED \
+			or _fsm.state == CharacterStateMachine.State.KNOCKDOWN:
 		return true
 	if _current_move != null and CharacterStateMachine.is_attacking(_fsm.state) \
 			and _current_move.is_invuln_at(_fsm.frame_in_state):
@@ -586,6 +640,7 @@ func apply_hit(move: MoveData, push_dir: float) -> void:
 	else:
 		_stun_frames = move.hitstun
 	if move.causes_knockdown:
+		_ultimate_knockdown = false
 		_fsm.on_launched()   # → KNOCKDOWN
 	else:
 		_fsm.on_hit()        # → HITSTUN
@@ -675,6 +730,7 @@ func apply_throw(move: MoveData) -> void:
 	position.y = minf(position.y, _floor_y - 1.0)
 	_vel = Vector2(0.0, move.throw_launch_y)
 	_pushback_vel = 0.0
+	_ultimate_knockdown = false
 	_fsm.on_launched()   # → KNOCKDOWN
 
 
@@ -696,10 +752,19 @@ func end_cinematic_attacker() -> void:
 	active_hitboxes_local = []
 	_fsm.request(CharacterStateMachine.State.IDLE)
 
-## Scripted damage from one cinematic strike — no stun, no state change (the
-## victim stays locked; their reaction is the sequencer's choreography).
+## Scripted damage from one cinematic strike — no timed stun (the victim stays
+## cinematic_locked throughout, so their own _physics_process/busy-exits never
+## run to time one out); pair with show_cinematic_hitstun() for the reaction.
 func apply_cinematic_damage(amount: int) -> void:
 	health = maxi(0, health - amount)
+
+## 7.3 — visual-only reaction to a pre-finisher cinematic hit: forces the
+## HITSTUN state so _on_state_changed's existing HITSTUN → hitstun-anim wiring
+## picks it up. _cinematic_locked already blocks input/physics for the victim,
+## so this never actually times out on its own — the sequencer's choreography
+## (or the finisher's later on_launched() → KNOCKDOWN) is what moves it along.
+func show_cinematic_hitstun() -> void:
+	_fsm.force(CharacterStateMachine.State.HITSTUN)
 
 ## The finisher: remaining damage + release + vertical pop into KNOCKDOWN
 ## (throw-style: lifted 1px so the knockdown arc integrates gravity).
@@ -711,6 +776,7 @@ func apply_cinematic_finisher(amount: int, launch_y: float) -> void:
 	_pushback_vel = 0.0
 	_current_move = null
 	active_hitboxes_local = []
+	_ultimate_knockdown = true
 	_fsm.on_launched()   # → KNOCKDOWN
 
 
@@ -732,8 +798,104 @@ func reset_for_round(spawn_x: float) -> void:
 	_juggle_count = 0
 	_air_attack_used = false
 	_cinematic_locked = false
+	_ultimate_knockdown = false
 	# _meter deliberately NOT reset — meter carries across rounds (spec 2026-07-04);
 	# a fresh match starts at 0 because controllers are freshly instantiated.
 	active_hitboxes_local = []
 	_fsm.reset(CharacterStateMachine.State.IDLE)
 	reset_physics_interpolation()
+
+
+func _on_state_changed(_from_state: int, to_state: int) -> void:
+	if _sprite == null or character_data == null:
+		return
+		
+	var anim_prefix = character_data.character_name.to_lower() + "_"
+	var target_anim = ""
+	
+	match to_state:
+		CharacterStateMachine.State.IDLE:
+			target_anim = anim_prefix + "idle"
+		CharacterStateMachine.State.CROUCH:
+			target_anim = anim_prefix + "crouch"
+		CharacterStateMachine.State.FAST_ATTACK:
+			target_anim = anim_prefix + "fast_attack"
+		CharacterStateMachine.State.HEAVY_ATTACK:
+			target_anim = anim_prefix + "heavy_attack"
+		CharacterStateMachine.State.WALK_F, CharacterStateMachine.State.WALK_B, \
+		CharacterStateMachine.State.DASH, CharacterStateMachine.State.BACKDASH:
+			target_anim = anim_prefix + "lunge"
+		CharacterStateMachine.State.HITSTUN:
+			target_anim = anim_prefix + "hitstun"
+		CharacterStateMachine.State.BLOCKSTUN:
+			target_anim = anim_prefix + "blockstun"
+		CharacterStateMachine.State.JUMP_START, CharacterStateMachine.State.JUMP_AIR, \
+		CharacterStateMachine.State.JUMP_F, CharacterStateMachine.State.JUMP_B, \
+		CharacterStateMachine.State.JUMP_LAND:
+			target_anim = anim_prefix + "jump"
+		CharacterStateMachine.State.KNOCKDOWN, CharacterStateMachine.State.KO:
+			target_anim = anim_prefix + "knockdown"
+		CharacterStateMachine.State.GETUP:
+			# No dedicated getup clip yet — idle reads fine as a placeholder.
+			target_anim = anim_prefix + "idle"
+		CharacterStateMachine.State.SKILL:
+			# SKILL is shared with the ultimate (see _attack_state_for note above _cancel_into);
+			# only play the skill animation when it's actually move_skill armed, so the
+			# ultimate's cinematic takeover keeps its own (box-fallback) look untouched.
+			if _current_move == move_skill:
+				target_anim = anim_prefix + "skill"
+
+	if target_anim != "" and _sprite.sprite_frames != null and _sprite.sprite_frames.has_animation(target_anim):
+		_sprite.play(target_anim)
+		_sprite.visible = true
+		_box.visible = false
+	else:
+		# Fallback: Hide sprite, show the colored box if animation doesn't exist
+		_sprite.visible = false
+		_box.visible = true
+
+
+## 7.3 — direct animation switch for the cinematic ultimate. The FSM stays in
+## one SKILL entry for the whole sequence (no per-phase state_changed signal to
+## hook), so UltimateCinematic calls this itself at each phase's _enter(...)
+## instead of going through _on_state_changed.
+func play_animation(anim_name: String) -> void:
+	if _sprite == null or _sprite.sprite_frames == null or not _sprite.sprite_frames.has_animation(anim_name):
+		return
+	_sprite.play(anim_name)
+	_sprite.visible = true
+	_box.visible = false
+
+
+## Knockdown/KO arc: tips the sprite back from upright (0°) to lying flat (90°,
+## away from facing — "falling backward") over KNOCKDOWN_ROTATE_FRAMES, then
+## holds flat for the rest of the knockdown. Time-based, not tied to the actual
+## vertical fall (most grounded knockdowns never leave the floor — apply_hit
+## only sets a real launch velocity for airborne/juggle hits and throws), so it
+## plays the same way regardless of whether there was a pop-up. Reset to 0/base
+## the instant the state isn't KNOCKDOWN/KO (e.g. GETUP, which reuses idle and
+## would otherwise inherit a sideways-tipped, dropped sprite).
+##
+## The sprite's local origin sits at _base_sprite_y (above the character's
+## floor-anchored position — the standing pose's feet-to-floor offset baked
+## into the scene). Rotating the square frame in place pivots around that same
+## raised point, which reads as the body hovering once it's flat instead of
+## resting on the ground — since the frame is square, the character's actual
+## art doesn't reach edge-to-edge, so its drawn content sits off-center within
+## the frame. Settling the offset to 0 by the end of the arc drops the frame
+## onto the floor line once it's fully horizontal.
+##
+## The offset follows an actual arc rather than dropping straight down: he's
+## thrown BACK, so it rises first (peaking at KNOCKDOWN_ARC_HEIGHT above the
+## straight-line path at the midpoint) before descending to the floor-level
+## rest — a parabola added on top of the base→0 lerp, zero at both ends.
+func _update_knockdown_rotation() -> void:
+	if _fsm.state != CharacterStateMachine.State.KNOCKDOWN \
+			and _fsm.state != CharacterStateMachine.State.KO:
+		_sprite.rotation = 0.0
+		_sprite.position.y = _base_sprite_y
+		return
+	var t: float = clampf(float(_fsm.frame_in_state) / KNOCKDOWN_ROTATE_FRAMES, 0.0, 1.0)
+	_sprite.rotation = deg_to_rad(90.0) * -facing * t
+	var arc: float = KNOCKDOWN_ARC_HEIGHT * 4.0 * t * (1.0 - t)   # 0 at t=0/1, peak at t=0.5
+	_sprite.position.y = lerpf(_base_sprite_y, 0.0, t) - arc

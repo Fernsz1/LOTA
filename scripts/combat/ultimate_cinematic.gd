@@ -64,14 +64,21 @@ const BAR_H: float = 70.0            # letterbox bar height
 # --- "rush" choreography ---
 const RUN_SPEED: float = 12.0        # px/frame toward the victim
 const RUN_CAP: int = 120             # safety: never run longer than this
-const STRIKE_GAP: float = 64.0       # attacker holds this distance while striking
+const STRIKE_GAP: float = 90.0      # attacker holds this distance while striking (min gap at full
+									  # thrust-extension is STRIKE_GAP - LUNGE, so this must stay
+									  # comfortably above LUNGE or the punches read as passing through)
 const WINDUP_FRAMES: int = 24        # hits 1-3: slow pull-back
 const THRUST_FRAMES: int = 4         # ...then a fast lunge
-const HOLD_FRAMES: int = 12          # impact freeze, hits 1-3
+const HOLD_FRAMES: int = 12          # impact freeze floor, hits 1-3 (see _hold_frames_for_hit)
 const RECOVER_FRAMES: int = 10
 const FINAL_WINDUP: int = 42         # hit 4: longer, deeper zoom
 const FINAL_THRUST: int = 5
-const FINAL_HOLD: int = 24
+const FINAL_HOLD: int = 24           # impact freeze floor, hit 4 (see _hold_frames_for_hit)
+const FINISHER_IMPACT_EXTRA: int = 20   # extra drama held on top of the finisher's clip length
+# Per-hit strike clip lengths in game-frames (frame_count / anim_speed * 60) — how
+# long _step_thrust + _step_hold need to run together so _thrust_anim() actually
+# finishes instead of getting cut off by RECOVER/LAUNCH. Index = _hit.
+const HIT_ANIM_FRAMES: Array[int] = [30, 40, 85, 60]   # fast_attack, heavy_attack, skill, uppercut
 const PULLBACK: float = 10.0         # attacker lean-back depth during windup
 const LUNGE: float = 36.0            # attacker thrust depth past his anchor
 const IMPACT_NUDGE: float = 8.0      # victim shoved back per non-final hit
@@ -314,6 +321,7 @@ func _step_zoom_in() -> void:
 				_enter(Phase.BLITZ)
 			_:
 				_enter(Phase.RUN)
+				attacker.play_animation("jerb_lunge")
 
 
 func _step_launch(dir: float) -> void:
@@ -351,6 +359,17 @@ func _step_run(dir: float) -> void:
 		_atk_base_x = _clamp_stage_x(victim.position.x - STRIKE_GAP * dir)
 		attacker.position.x = _atk_base_x
 		_enter(Phase.WINDUP)
+		attacker.play_animation("jerb_idle")
+
+
+## Per-hit thrust/strike clip: hit 1 = fast_attack, hit 2 = heavy_attack,
+## hit 3 = skill, hit 4 (the finisher) = the dedicated uppercut.
+func _thrust_anim() -> String:
+	match _hit:
+		0: return "jerb_fast_attack"
+		1: return "jerb_heavy_attack"
+		2: return "jerb_skill"
+		_: return "jerb_ult_uppercut"
 
 
 func _step_windup(dir: float) -> void:
@@ -361,10 +380,24 @@ func _step_windup(dir: float) -> void:
 	_follow(Vector2(_mid_x(), FOCUS_Y), 0.2, zoom)
 	if _t >= frames:
 		_enter(Phase.THRUST)
+		attacker.play_animation(_thrust_anim())
+
+
+## How far into _thrust_anim()'s own clip length the punch actually connects —
+## the lunge motion (THRUST) now runs this long before _impact() fires, instead
+## of the old fixed THRUST_FRAMES/FINAL_THRUST (4-5 frames), which was only
+## ~5-13% into a clip and fired the flash/shake/damage well before the punch
+## was visually anywhere near the target. Floor keeps the original constants as
+## a minimum so a short clip doesn't make the lunge motion itself feel clipped.
+const THRUST_CONTACT_FRACTION: float = 0.35
+
+func _thrust_frames_for_hit() -> int:
+	var floor_frames: int = FINAL_THRUST if _hit == 3 else THRUST_FRAMES
+	return maxi(floor_frames, int(HIT_ANIM_FRAMES[_hit] * THRUST_CONTACT_FRACTION))
 
 
 func _step_thrust(dir: float) -> void:
-	var frames: int = FINAL_THRUST if _hit == 3 else THRUST_FRAMES
+	var frames: int = _thrust_frames_for_hit()
 	var t: float = _t / float(frames)
 	attacker.position.x = _atk_base_x + (-PULLBACK + (PULLBACK + LUNGE) * t) * dir
 	_follow(Vector2(_mid_x(), FOCUS_Y), 0.25, FINAL_ZOOM if _hit == 3 else FOCUS_ZOOM)
@@ -373,14 +406,27 @@ func _step_thrust(dir: float) -> void:
 		_enter(Phase.HOLD)
 
 
+## Long enough, together with the preceding _step_thrust, for _thrust_anim()'s
+## clip to actually finish (HIT_ANIM_FRAMES) rather than getting cut off — floor
+## is the original fixed HOLD_FRAMES/FINAL_HOLD, in case a future clip is ever
+## shorter than that. The finisher additionally gets FINISHER_IMPACT_EXTRA on
+## top, for a longer beat than just "clip done" (2026-07-05 ask).
+func _hold_frames_for_hit() -> int:
+	var thrust: int = _thrust_frames_for_hit()
+	var floor_frames: int = FINAL_HOLD if _hit == 3 else HOLD_FRAMES
+	var needed: int = maxi(floor_frames, HIT_ANIM_FRAMES[_hit] - thrust)
+	return needed + FINISHER_IMPACT_EXTRA if _hit == 3 else needed
+
+
 func _step_hold() -> void:
 	# Attacker stays extended; the flash/shake decay sells the freeze.
-	if _t >= (FINAL_HOLD if _hit == 3 else HOLD_FRAMES):
+	if _t >= _hold_frames_for_hit():
 		if _hit == 3:
 			_launch_vel = LAUNCH_SPEED
 			_enter(Phase.LAUNCH)
 		else:
 			_enter(Phase.RECOVER)
+			attacker.play_animation("jerb_idle")
 
 
 func _step_recover(dir: float) -> void:
@@ -391,11 +437,13 @@ func _step_recover(dir: float) -> void:
 		# Re-anchor: the victim was nudged back, keep the strike gap consistent.
 		_atk_base_x = _clamp_stage_x(victim.position.x - STRIKE_GAP * dir)
 		_enter(Phase.WINDUP)
+		attacker.play_animation("jerb_idle")
 
 
 func _impact(dir: float) -> void:
 	if _hit < 3:
 		victim.apply_cinematic_damage(_hit_damages[_hit])
+		victim.show_cinematic_hitstun()
 		victim.position.x = _clamp_stage_x(victim.position.x + IMPACT_NUDGE * dir)
 		_flash.color.a = 0.45
 		_shake = 5.0
@@ -592,6 +640,7 @@ func _step_weave(dir: float) -> void:
 	if _t >= beat:
 		attacker.position.x = _atk_base_x + 8.0 * dir
 		victim.apply_cinematic_damage(_hit_damages[_hit])
+		victim.show_cinematic_hitstun()
 		victim.position.x = _clamp_stage_x(victim.position.x + WEAVE_NUDGE * dir)
 		_show_slash(1 if _hit % 2 == 0 else -1)
 		_flash.color.a = 0.3
@@ -694,6 +743,7 @@ func _step_b_kick(dir: float) -> void:
 	if _t >= B_KICK_WINDUP:
 		attacker.position.x = _atk_base_x + 10.0 * dir
 		victim.apply_cinematic_damage(_hit_damages[_hit])
+		victim.show_cinematic_hitstun()
 		victim.position.x = _clamp_stage_x(victim.position.x + B_KICK_NUDGE * dir)
 		_flash.color.a = 0.3
 		_shake = 3.5
@@ -733,6 +783,12 @@ func _begin(move: MoveData, fx_parent: Node) -> void:
 	elif _style == "blitz":
 		fractions = BLITZ_FRACTIONS
 	_split_damage(move.damage, fractions)
+	if _style == "rush":
+		# Otherwise the attacker sits in the box fallback for the whole ZOOM_IN
+		# windup — _on_state_changed's SKILL case only recognizes move_skill, and
+		# the first play_animation() call from a phase step doesn't happen until
+		# ZOOM_IN ends and RUN begins.
+		attacker.play_animation("jerb_idle")
 	_build_fx(fx_parent)
 	if _style == "sky_rally" or _style == "slam" or _style == "weave":
 		_build_world_fx(fx_parent)
