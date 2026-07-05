@@ -40,6 +40,9 @@ func _init() -> void:
 	var centre := _archipelago_centre(plane)
 	plane.transform = MapManagerScript.tilt_transform(
 		centre, MapManagerScript.TILT_ROT_DEG, MapManagerScript.TILT_SCALE_Y)
+	# Scale + centre the tilted map into a framed region: below the header, left of
+	# the info panel (x >= 884), with margins so nothing touches the screen edge.
+	_fit_plane(plane, Rect2(64, 214, 772, 452))
 
 	# 3. Markers layer (auto-builds at runtime from centroids + plane transform).
 	var markers: Node2D = MapMarkersScript.new()
@@ -73,6 +76,32 @@ func _init() -> void:
 		return
 	print("SUCCESS: saved ", OUT_PATH)
 	quit(0)
+
+## Prepend a uniform scale+translate to plane.transform so the tilted map's world
+## bounding box fits centred inside `target`. Markers (which read plane.transform *
+## centroid at runtime) follow automatically.
+func _fit_plane(plane: Node2D, target: Rect2) -> void:
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for region in plane.get_children():
+		var top := region.get_node_or_null("Visual/Top") as Node2D
+		if top == null:
+			continue
+		for poly in top.get_children():
+			if poly is Polygon2D:
+				for p in poly.polygon:
+					var w: Vector2 = plane.transform * p
+					lo = lo.min(w); hi = hi.max(w)
+	if lo.x > hi.x:
+		return
+	var box_size := hi - lo
+	var s: float = minf(target.size.x / box_size.x, target.size.y / box_size.y)
+	var box_c := (lo + hi) * 0.5
+	var target_c := target.position + target.size * 0.5
+	var fit := Transform2D(0.0, target_c) \
+		* Transform2D(Vector2(s, 0.0), Vector2(0.0, s), Vector2.ZERO) \
+		* Transform2D(0.0, -box_c)
+	plane.transform = fit * plane.transform
 
 ## Bounding-box centre of all baked region centroids (in plane-local space).
 func _archipelago_centre(plane: Node2D) -> Vector2:

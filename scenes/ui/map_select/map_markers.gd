@@ -76,10 +76,10 @@ func _draw_beacon(beacon: Node2D) -> void:
 	var col: Color = _colors.get(String(beacon.name), Color.WHITE)
 	# upright light beam: a soft vertical cone rising from the beacon
 	var beam := PackedVector2Array([
-		Vector2(-3, 0), Vector2(3, 0), Vector2(18, -190), Vector2(-18, -190)])
+		Vector2(-3, 0), Vector2(3, 0), Vector2(16, -104), Vector2(-16, -104)])
 	beacon.draw_colored_polygon(beam, Color(col.r, col.g, col.b, 0.22))
 	var core_beam := PackedVector2Array([
-		Vector2(-1.5, 0), Vector2(1.5, 0), Vector2(5, -180), Vector2(-5, -180)])
+		Vector2(-1.5, 0), Vector2(1.5, 0), Vector2(5, -98), Vector2(-5, -98)])
 	beacon.draw_colored_polygon(core_beam, Color(col.r, col.g, col.b, 0.5))
 	# pulsing halo
 	beacon.draw_circle(Vector2.ZERO, 22.0, Color(col.r, col.g, col.b, 0.25))

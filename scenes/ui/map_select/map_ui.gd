@@ -93,10 +93,12 @@ func _on_confirm_click() -> void:
 
 # ---------- drawing ----------
 
-## CSS skewX(deg): x' = x + y*tan(deg). Pivots about `origin`.
+## CSS skewX(deg) about pivot `origin`: x' = x + (y - origin.y)*tan(deg), y' = y.
+## The translation must cancel the pivot's own shear (-tan*origin.y), otherwise the
+## whole element is pushed off by +origin — which hid the panel/preview/confirm.
 static func _skew_x(deg: float, origin: Vector2) -> Transform2D:
 	var t := tan(deg_to_rad(deg))
-	return Transform2D(Vector2(1.0, 0.0), Vector2(t, 1.0), origin)
+	return Transform2D(Vector2(1.0, 0.0), Vector2(t, 1.0), Vector2(-t * origin.y, 0.0))
 
 func _draw_overlay() -> void:
 	if _state.is_empty():
