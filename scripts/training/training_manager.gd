@@ -2,7 +2,9 @@ class_name TrainingManager
 extends Node
 ## 4.1 — Dummy AI, infinite-health overrides, and position reset for all 4 training chars.
 ## P1 and P2 are always human-controlled. P1Dummy (idx 3) and P2Dummy (idx 4) are always AI.
-## Keys: R=reset  1/2=cycle P1/P2 dummy mode  3/4=dummy ♥INF  Q/E=player ♥INF
+## Keys: R=reset  1/2=cycle P1/P2 dummy mode  3/4=dummy ♥INF  Q/E=player ♥INF  5=fill meters
+## 7.5: the ult meter is the REAL versus rage bar (builds on damage dealt/taken,
+## spent on activation) — key 5 refills both players instantly for practice.
 
 enum DummyMode { STAND, CROUCH, JUMP }
 const MODE_LABELS: Array[String] = ["STAND", "CROUCH", "JUMP"]
@@ -43,20 +45,23 @@ var _p1d_regen_timer: int = 0
 var _p2d_regen_timer: int = 0
 
 
+func _ready() -> void:
+	_push_status()
+	# Initial spawn reset, deferred: set_character() (applied in the PARENT's
+	# _ready, which runs after this one) swaps stats like max_health but keeps
+	# the .tscn fighter's current health — versus fixes that via MatchManager's
+	# immediate round reset, so training needs its own equivalent (7.5).
+	call_deferred("reset_positions")
+
+
 func _physics_process(_delta: float) -> void:
-	# Ultimate meter pinned full in training (spec): always practicable. A used
-	# ultimate refills next frame.
-	_p1.fill_meter()
-	_p1_dummy.fill_meter()
-	_p2_dummy.fill_meter()
-	_p2.fill_meter()
 	if p1_infinite:       _p1.health = _p1.get_max_health()
 	if p1_dummy_infinite: _p1_dummy.health = _p1_dummy.get_max_health()
 	if p2_dummy_infinite: _p2_dummy.health = _p2_dummy.get_max_health()
 	if p2_infinite:       _p2.health = _p2.get_max_health()
 	# Drive dummies via virtual player slots (player_index 3 and 4)
-	InputManager.set_override(3, _mode_bits(_p1_dummy, _p1, p1_dummy_mode, _p1_dummy_jump_timer))
-	InputManager.set_override(4, _mode_bits(_p2_dummy, _p2, p2_dummy_mode, _p2_dummy_jump_timer))
+	InputManager.set_override(3, _mode_bits(p1_dummy_mode, _p1_dummy_jump_timer))
+	InputManager.set_override(4, _mode_bits(p2_dummy_mode, _p2_dummy_jump_timer))
 	_p1_dummy_jump_timer = (_p1_dummy_jump_timer + 1) % JUMP_CYCLE
 	_p2_dummy_jump_timer = (_p2_dummy_jump_timer + 1) % JUMP_CYCLE
 	# Dummy health regen: 5 s delay, then ~2 s to full. Skipped if ♥INF active.
@@ -76,10 +81,6 @@ func _physics_process(_delta: float) -> void:
 		else:
 			_p2_dummy.health = mini(_p2_dummy.health + REGEN_PER_FRAME, _p2_dummy.get_max_health())
 		_p2d_prev_hp = _p2_dummy.health
-	_hud.set_player_info(1, p1_infinite)
-	_hud.set_dummy_info(1, MODE_LABELS[p1_dummy_mode], p1_dummy_infinite)
-	_hud.set_dummy_info(2, MODE_LABELS[p2_dummy_mode], p2_dummy_infinite)
-	_hud.set_player_info(2, p2_infinite)
 
 
 func _input(event: InputEvent) -> void:
@@ -88,6 +89,11 @@ func _input(event: InputEvent) -> void:
 	match event.keycode:
 		KEY_R:
 			reset_positions()
+		KEY_5:
+			# Instant meter refill (players only — dummies never ult), so the
+			# cinematic ultimates stay practicable without grinding the bar.
+			_p1.fill_meter()
+			_p2.fill_meter()
 		KEY_1:
 			p1_dummy_mode = wrapi(p1_dummy_mode + 1, 0, MODE_LABELS.size()) as DummyMode
 		KEY_2:
@@ -100,6 +106,9 @@ func _input(event: InputEvent) -> void:
 			p1_infinite = not p1_infinite
 		KEY_E:
 			p2_infinite = not p2_infinite
+		_:
+			return
+	_push_status()
 
 
 func reset_positions() -> void:
@@ -109,8 +118,15 @@ func reset_positions() -> void:
 	_p2.reset_for_round(P2_SPAWN_X)
 
 
-func _mode_bits(dummy: CharacterController, _opponent: CharacterController,
-		mode: DummyMode, jump_timer: int) -> int:
+# Status pushes are event-driven (toggles change rarely), not per-frame.
+func _push_status() -> void:
+	_hud.set_dummy_status(1, MODE_LABELS[p1_dummy_mode], p1_dummy_infinite)
+	_hud.set_dummy_status(2, MODE_LABELS[p2_dummy_mode], p2_dummy_infinite)
+	_hud.set_player_status(1, p1_infinite)
+	_hud.set_player_status(2, p2_infinite)
+
+
+func _mode_bits(mode: DummyMode, jump_timer: int) -> int:
 	match mode:
 		DummyMode.STAND:
 			return 0

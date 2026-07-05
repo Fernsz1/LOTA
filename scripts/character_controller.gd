@@ -82,6 +82,13 @@ var _juggle_count: int = 0   # 3.5: airborne hits accumulated this combo; resets
 var _air_attack_used: bool = false   # one air attack per jump; cleared on landing / fresh jump
 var _cinematic_locked: bool = false   # 7.3: UltimateCinematic owns this fighter while set
 var _ultimate_knockdown: bool = false # this KNOCKDOWN came from a cinematic finisher → longer GETUP
+
+# 7.5 — training dummies are planted: they still take damage and react
+# (HITSTUN/KNOCKDOWN animations play out in place), but hit/block pushback
+# never slides them, so combos can be practiced without chasing the dummy
+# into a corner. The training scene also makes pushbox separation shove only
+# the mobile side when this is set. Never set in versus.
+var pushback_immune: bool = false
 signal projectile_requested(data: ProjectileData, origin: Vector2, facing: int)
 
 var _overlay: Node = null
@@ -633,7 +640,7 @@ func apply_hitstop(frames: int) -> void:
 func apply_hit(move: MoveData, push_dir: float) -> void:
 	health = maxi(0, health - move.damage)
 	_meter.gain_taken(move.damage)
-	_pushback_vel = move.pushback_hit * push_dir
+	_pushback_vel = 0.0 if pushback_immune else move.pushback_hit * push_dir
 	if position.y < _floor_y:
 		_stun_frames = maxi(1, int(move.hitstun * pow(JUGGLE_DECAY, _juggle_count)))
 		_juggle_count += 1
@@ -648,7 +655,7 @@ func apply_hit(move: MoveData, push_dir: float) -> void:
 ## Resolve a blocked hit (2.4) — no damage (no chip in v1), BLOCKSTUN, more pushback.
 func apply_block(move: MoveData, push_dir: float) -> void:
 	_stun_frames = move.blockstun
-	_pushback_vel = move.pushback_block * push_dir
+	_pushback_vel = 0.0 if pushback_immune else move.pushback_block * push_dir
 	_fsm.on_blocked()        # → BLOCKSTUN
 
 ## 6.2 — successful counter: release the stance to neutral immediately (the same
@@ -663,7 +670,7 @@ func apply_hit_proj(data: ProjectileData, push_dir: float) -> void:
 	health = maxi(0, health - data.damage)
 	_meter.gain_taken(data.damage)
 	_stun_frames = data.hitstun
-	_pushback_vel = data.pushback_hit * push_dir
+	_pushback_vel = 0.0 if pushback_immune else data.pushback_hit * push_dir
 	if data.causes_knockdown:
 		_fsm.on_launched()
 	else:
@@ -672,7 +679,7 @@ func apply_hit_proj(data: ProjectileData, push_dir: float) -> void:
 ## Resolve a blocked projectile (3.2) — no damage, blockstun, more pushback.
 func apply_block_proj(data: ProjectileData, push_dir: float) -> void:
 	_stun_frames = data.blockstun
-	_pushback_vel = data.pushback_block * push_dir
+	_pushback_vel = 0.0 if pushback_immune else data.pushback_block * push_dir
 	_fsm.on_blocked()
 
 # --- Grab/throw API (6.4) — driven by ThrowSequencer (match/training scenes) ---
@@ -751,6 +758,12 @@ func end_cinematic_attacker() -> void:
 	_current_move = null
 	active_hitboxes_local = []
 	_fsm.request(CharacterStateMachine.State.IDLE)
+
+## 7.5 — release for a cinematic BYSTANDER (training: the other arena's pair is
+## locked while a cutscene plays in this one). Unlike the attacker/finisher
+## releases, nothing else changes: the fighter resumes exactly where it froze.
+func end_cinematic_lock() -> void:
+	_cinematic_locked = false
 
 ## Scripted damage from one cinematic strike — no timed stun (the victim stays
 ## cinematic_locked throughout, so their own _physics_process/busy-exits never

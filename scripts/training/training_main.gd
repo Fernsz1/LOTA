@@ -1,15 +1,33 @@
 extends Node2D
-## 4.1 — Training scene root. Two isolated arenas split by a mid-stage wall.
-## Left arena: P1 (human) vs P1Dummy. Right arena: P2Dummy vs P2 (human).
-## The wall blocks both projectiles and physical movement.
+## 4.1/7.5 — Training scene root. Two isolated arenas split by a mid-stage wall,
+## so BOTH players can practice at once: left arena P1 (human) vs P1Dummy,
+## right arena P2Dummy vs P2 (human). The wall blocks projectiles and movement.
+##
+## 7.5 modernised the flow and dressing without touching that layout: training
+## is reached through the same character/stage select as versus (P1's pick =
+## P1, P2's pick = P2; each player spars the OTHER player's pick — matchup
+## practice), and the versus MatchHUD renders the two humans' plates, health
+## and meters (clock/round/pips hidden). Dummy health lives on the training
+## strip. Cinematic ultimates play here too, scoped to the ulting player's
+## HALF of the stage (the sequencer gets that arena's bounds) while the other
+## arena's pair is frozen as bystanders — one camera, one cutscene at a time.
+## The meter is the real versus rage bar (builds on damage, spent on the ult);
+## key 5 refills both players instantly for practice.
 
 const FLOOR_Y: float = 560.0
 const LEFT_WALL_X: float = 50.0
 const RIGHT_WALL_X: float = 1230.0
 const WALL_X: float = 640.0
 
+const MM := preload("res://scripts/match/match_manager.gd")   # for push_fighter()
+
 @onready var _overlay: Node = $DebugOverlay
-@onready var _hud: Node = $TrainingHUD
+@onready var _combat_debug: Node = $CombatDebug
+@onready var _camera: Camera2D = $Camera
+@onready var _match_hud: CanvasLayer = $MatchHUD
+@onready var _hud: CanvasLayer = $TrainingHUD
+@onready var _background: ColorRect = $Background
+@onready var _floor: ColorRect = $Floor
 @onready var _p1: CharacterController = $P1
 @onready var _p1_dummy: CharacterController = $P1Dummy
 @onready var _p2_dummy: CharacterController = $P2Dummy
@@ -20,16 +38,45 @@ var _projectiles: Array[Projectile] = []
 # 6.4 — one live throw per arena (left: P1/P1Dummy, right: P2/P2Dummy).
 var _throw_left: ThrowSequencer = null
 var _throw_right: ThrowSequencer = null
+# 7.3/7.5 — the one live cinematic ultimate + the other arena's frozen pair.
+var _ultimate: UltimateCinematic = null
+var _bystanders: Array[CharacterController] = []
 
 
 func _ready() -> void:
 	process_physics_priority = 1
 	Input.use_accumulated_input = false
+	# Both debug overlays (F1 hitboxes, F2 frame/state panel) must start OFF on
+	# every training entry — forced here rather than trusting only the .tscn's
+	# baked `visible = false`, since CombatDebug's own _ready() reads `visible`
+	# to seed its `_enabled` toggle state; this guarantees both are in sync.
+	_overlay.visible = false
+	_combat_debug.visible = false
+	# Character-select picks: each human plays their own pick; each DUMMY gets
+	# the other player's pick, so both sides practice the matchup they'd play.
+	# Absent (F6 in the editor) → the .tscn-authored defaults apply.
+	if MatchSelection.p1_data != null:
+		_p1.set_character(MatchSelection.p1_data, MatchSelection.p1_color)
+		_p2_dummy.set_character(MatchSelection.p1_data, MatchSelection.p1_color)
+	if MatchSelection.p2_data != null:
+		_p2.set_character(MatchSelection.p2_data, MatchSelection.p2_color)
+		_p1_dummy.set_character(MatchSelection.p2_data, MatchSelection.p2_color)
+	_match_hud.configure_for_training()
+	MM.push_fighter(_match_hud, 1, _p1.character_data)
+	MM.push_fighter(_match_hud, 2, _p2.character_data)
+	# Stage-select pick overrides the .tscn-authored background/floor.
+	if MatchSelection.stage_data != null:
+		_background.color = MatchSelection.stage_data.background_color
+		_floor.color = MatchSelection.stage_data.floor_color
 	# Each arena uses its own half of the stage; the wall is the inner boundary.
 	_p1.setup(FLOOR_Y, LEFT_WALL_X, WALL_X, _overlay)
 	_p1_dummy.setup(FLOOR_Y, LEFT_WALL_X, WALL_X, _overlay)
 	_p2_dummy.setup(FLOOR_Y, WALL_X, RIGHT_WALL_X, _overlay)
 	_p2.setup(FLOOR_Y, WALL_X, RIGHT_WALL_X, _overlay)
+	# 7.5 — dummies are planted: hits/blocks never slide them, and separation
+	# below shoves only the human. Reset (R) is how they return to spawn.
+	_p1_dummy.pushback_immune = true
+	_p2_dummy.pushback_immune = true
 	# owner_index: 1=P1→P1Dummy, 2=P1Dummy→P1, 3=P2Dummy→P2, 4=P2→P2Dummy
 	_p1.projectile_requested.connect(_on_projectile_requested.bind(1))
 	_p1_dummy.projectile_requested.connect(_on_projectile_requested.bind(2))
@@ -39,14 +86,19 @@ func _ready() -> void:
 
 func _physics_process(_delta: float) -> void:
 	_update_facing()
+	_resolve_ultimate_cinematic()   # before combat: the locks freeze everything below
 	_resolve_combat()
 	_resolve_throws()
 	_resolve_projectiles()
-	_resolve_pushboxes()
-	_hud.set_health(1, _p1.health / float(_p1.get_max_health()))
-	_hud.set_health(2, _p1_dummy.health / float(_p1_dummy.get_max_health()))
-	_hud.set_health(3, _p2_dummy.health / float(_p2_dummy.get_max_health()))
-	_hud.set_health(4, _p2.health / float(_p2.get_max_health()))
+	if _ultimate == null:   # the sequencer owns its pair's spacing; the rest is frozen
+		_resolve_pushboxes()
+	# Humans on the match HUD (same frame as versus), dummies on the strip.
+	_match_hud.set_health(1, _p1.health / float(_p1.get_max_health()))
+	_match_hud.set_health(2, _p2.health / float(_p2.get_max_health()))
+	_match_hud.set_meter(1, _p1.get_meter_fraction())
+	_match_hud.set_meter(2, _p2.get_meter_fraction())
+	_hud.set_dummy_health(1, _p1_dummy.health / float(_p1_dummy.get_max_health()))
+	_hud.set_dummy_health(2, _p2_dummy.health / float(_p2_dummy.get_max_health()))
 	# Live move readout for the two human players
 	_hud.set_move_readout(1, _p1.get_current_move(), _p1.get_frame_in_state())
 	_hud.set_move_readout(2, _p2.get_current_move(), _p2.get_frame_in_state())
@@ -57,6 +109,37 @@ func _update_facing() -> void:
 	_p1_dummy.facing = 1 if _p1.position.x > _p1_dummy.position.x else -1
 	_p2_dummy.facing = 1 if _p2.position.x > _p2_dummy.position.x else -1
 	_p2.facing = 1 if _p2_dummy.position.x > _p2.position.x else -1
+
+
+# 7.3/7.5 — cinematic ultimates, scoped to the ulting player's arena: the
+# sequencer gets that HALF's stage bounds, so the whole cutscene (run-in,
+# launch, camera clamps) stays inside it. The other arena's pair is frozen as
+# bystanders for the duration — one camera can only tell one story. Never
+# starts over that arena's live throw; the training strip hides like versus'
+# HUD does.
+func _resolve_ultimate_cinematic() -> void:
+	if _ultimate != null:
+		if _ultimate.step():
+			_ultimate = null
+			for c in _bystanders:
+				c.end_cinematic_lock()
+			_bystanders = []
+			_hud.visible = true
+		return
+	if _throw_left == null:
+		_ultimate = UltimateCinematic.try_start(_p1, _p1_dummy, _camera, _match_hud,
+				self, LEFT_WALL_X, WALL_X, true)   # fixed camera: half-screen cutscene
+		if _ultimate != null:
+			_bystanders = [_p2, _p2_dummy]
+	if _ultimate == null and _throw_right == null:
+		_ultimate = UltimateCinematic.try_start(_p2, _p2_dummy, _camera, _match_hud,
+				self, WALL_X, RIGHT_WALL_X, true)
+		if _ultimate != null:
+			_bystanders = [_p1, _p1_dummy]
+	if _ultimate != null:
+		for c in _bystanders:
+			c.begin_cinematic_lock()
+		_hud.visible = false
 
 
 func _resolve_combat() -> void:
@@ -219,6 +302,13 @@ func _resolve_pair(left_bound: float, right_bound: float,
 	var half_w: float = CharacterController.PUSH_W * 0.5
 	var min_x: float = left_bound + half_w
 	var max_x: float = right_bound - half_w
+	# 7.5 — planted dummy: the human absorbs the whole separation; the dummy
+	# never budges (walking into it feels like pushing against a wall).
+	if a.pushback_immune or b.pushback_immune:
+		var mover: CharacterController = b if a.pushback_immune else a
+		var away: float = dir if a.pushback_immune else -dir
+		mover.position.x = clampf(mover.position.x + push * 2.0 * away, min_x, max_x)
+		return
 	a.position.x -= push * dir
 	b.position.x += push * dir
 	if a.position.x < min_x:

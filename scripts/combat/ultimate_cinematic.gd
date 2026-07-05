@@ -167,6 +167,11 @@ var _right_x: float = 1230.0
 var _floor_y: float = 560.0
 
 var _style: String = "rush"
+# 7.5 — training's half-screen presentation: the camera never moves (no zoom,
+# no shake, no letterbox), so the cutscene visibly plays inside the ulting
+# arena's half of the static full-stage view while the other half sits frozen;
+# the hit-flash is confined to that half too. Versus keeps the full camera work.
+var _fixed_camera: bool = false
 var _phase: int = Phase.ZOOM_IN
 var _t: int = 0                     # frames in the current phase
 var _hit: int = 0                   # rush: strike index / sky_rally: kick index
@@ -201,7 +206,7 @@ var _dart_to_x: float = 0.0
 ## the move simply resolves as the normal strike it also authors.
 static func try_start(atk: CharacterController, def: CharacterController,
 		camera: Camera2D, hud: CanvasLayer, fx_parent: Node,
-		left_x: float, right_x: float) -> UltimateCinematic:
+		left_x: float, right_x: float, fixed_camera: bool = false) -> UltimateCinematic:
 	var move: MoveData = atk.get_current_move()
 	if move == null:
 		move = atk.get_grab_move()   # a grab ultimate (Jacob) sits in GRAB_ATTEMPT, not SKILL
@@ -224,6 +229,7 @@ static func try_start(atk: CharacterController, def: CharacterController,
 	seq._left_x = left_x
 	seq._right_x = right_x
 	seq._style = move.cinematic_style
+	seq._fixed_camera = fixed_camera
 	seq._begin(move, fx_parent)
 	return seq
 
@@ -299,9 +305,10 @@ func is_done() -> bool:
 
 func _step_zoom_in() -> void:
 	var e: float = _ease(_t / float(ZOOM_IN_FRAMES))
-	var focus: Vector2 = _cam_clamp(Vector2(attacker.position.x, FOCUS_Y), FOCUS_ZOOM)
-	_camera.position = HOME_POS.lerp(focus, e)
-	_camera.zoom = Vector2.ONE * lerpf(1.0, FOCUS_ZOOM, e)
+	if not _fixed_camera:
+		var focus: Vector2 = _cam_clamp(Vector2(attacker.position.x, FOCUS_Y), FOCUS_ZOOM)
+		_camera.position = HOME_POS.lerp(focus, e)
+		_camera.zoom = Vector2.ONE * lerpf(1.0, FOCUS_ZOOM, e)
 	_set_bars(BAR_H * e)
 	# Ground a frozen airborne victim so the finisher lines up at body height.
 	victim.position.y = lerpf(_victim_start_y, _floor_y, e)
@@ -325,7 +332,7 @@ func _step_zoom_in() -> void:
 
 
 func _step_launch(dir: float) -> void:
-	victim.position.x = _clamp_stage_x(victim.position.x + _launch_vel * dir)
+	_shove_victim(_launch_vel * dir)
 	_launch_vel = maxf(2.0, _launch_vel * 0.88)
 	var zoom: float = lerpf(FINAL_ZOOM, FOCUS_ZOOM, _t / float(LAUNCH_FRAMES))
 	_follow(Vector2(victim.position.x, FOCUS_Y), 0.25, zoom)
@@ -341,8 +348,9 @@ func _step_zoom_out() -> void:
 	# Fighters are already released — the victim falls into knockdown while the
 	# camera pulls home and the bars slide away.
 	var e: float = _ease(_t / float(ZOOM_OUT_FRAMES))
-	_camera.position = _zoom_out_from_pos.lerp(HOME_POS, e)
-	_camera.zoom = Vector2.ONE * lerpf(_zoom_out_from_zoom, 1.0, e)
+	if not _fixed_camera:
+		_camera.position = _zoom_out_from_pos.lerp(HOME_POS, e)
+		_camera.zoom = Vector2.ONE * lerpf(_zoom_out_from_zoom, 1.0, e)
 	_set_bars(BAR_H * (1.0 - e))
 	if _t >= ZOOM_OUT_FRAMES:
 		_finish()
@@ -444,7 +452,7 @@ func _impact(dir: float) -> void:
 	if _hit < 3:
 		victim.apply_cinematic_damage(_hit_damages[_hit])
 		victim.show_cinematic_hitstun()
-		victim.position.x = _clamp_stage_x(victim.position.x + IMPACT_NUDGE * dir)
+		_shove_victim(IMPACT_NUDGE * dir)
 		_flash.color.a = 0.45
 		_shake = 5.0
 	else:
@@ -641,7 +649,7 @@ func _step_weave(dir: float) -> void:
 		attacker.position.x = _atk_base_x + 8.0 * dir
 		victim.apply_cinematic_damage(_hit_damages[_hit])
 		victim.show_cinematic_hitstun()
-		victim.position.x = _clamp_stage_x(victim.position.x + WEAVE_NUDGE * dir)
+		_shove_victim(WEAVE_NUDGE * dir)
 		_show_slash(1 if _hit % 2 == 0 else -1)
 		_flash.color.a = 0.3
 		_shake = 3.5
@@ -744,7 +752,7 @@ func _step_b_kick(dir: float) -> void:
 		attacker.position.x = _atk_base_x + 10.0 * dir
 		victim.apply_cinematic_damage(_hit_damages[_hit])
 		victim.show_cinematic_hitstun()
-		victim.position.x = _clamp_stage_x(victim.position.x + B_KICK_NUDGE * dir)
+		_shove_victim(B_KICK_NUDGE * dir)
 		_flash.color.a = 0.3
 		_shake = 3.5
 		_hit += 1
@@ -819,9 +827,10 @@ func _enter(phase: int) -> void:
 
 
 func _finish() -> void:
-	_camera.position = HOME_POS
-	_camera.zoom = Vector2.ONE
-	_camera.offset = Vector2.ZERO
+	if not _fixed_camera:
+		_camera.position = HOME_POS
+		_camera.zoom = Vector2.ONE
+		_camera.offset = Vector2.ZERO
 	_hud.visible = true
 	_set_box_spin(0.0)   # safety: never leave a fighter tilted
 	_set_vic_spin(0.0)
@@ -870,6 +879,16 @@ func _clamp_stage_x(x: float) -> float:
 	return clampf(x, _left_x + half_w, _right_x - half_w)
 
 
+## 7.5 — scripted shoves/launches respect planted training dummies
+## (pushback_immune): the victim reacts in place (damage, knockdown) but never
+## slides. Grab choreography (Jacob's slam carry) still positions the victim
+## directly — a throw inherently moves its target, planted or not.
+func _shove_victim(dx: float) -> void:
+	if victim.pushback_immune:
+		return
+	victim.position.x = _clamp_stage_x(victim.position.x + dx)
+
+
 ## Camera target clamped so the zoomed view never leaves the 1280x720 canvas.
 func _cam_clamp(pos: Vector2, zoom: float) -> Vector2:
 	var half_w: float = 640.0 / zoom
@@ -879,6 +898,8 @@ func _cam_clamp(pos: Vector2, zoom: float) -> Vector2:
 
 
 func _follow(target: Vector2, weight: float, zoom: float) -> void:
+	if _fixed_camera:
+		return
 	_camera.position = _camera.position.lerp(_cam_clamp(target, zoom), weight)
 	_camera.zoom = _camera.zoom.lerp(Vector2.ONE * zoom, 0.15)
 
@@ -889,6 +910,8 @@ func _ease(t: float) -> float:   # smoothstep
 
 
 func _set_bars(h: float) -> void:
+	if _fixed_camera:
+		return   # half-screen mode: no letterbox (it would span both arenas)
 	_top_bar.offset_bottom = h
 	_bottom_bar.offset_top = -h
 
@@ -896,8 +919,9 @@ func _set_bars(h: float) -> void:
 func _decay_fx() -> void:
 	_flash.color.a = 0.0 if _flash.color.a < 0.01 else _flash.color.a * 0.85
 	_shake *= 0.85
-	_camera.offset = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * _shake \
-			if _shake > 0.3 else Vector2.ZERO
+	if not _fixed_camera:
+		_camera.offset = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * _shake \
+				if _shake > 0.3 else Vector2.ZERO
 	if _slash != null and _slash.visible:
 		_slash.color.a *= 0.8
 		if _slash.color.a < 0.03:
@@ -912,6 +936,13 @@ func _build_fx(fx_parent: Node) -> void:
 	_flash.color = Color(1, 1, 1, 0)
 	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if _fixed_camera:
+		# Half-screen mode: the hit-flash covers only this arena's half of the
+		# screen, so the frozen half visibly stays outside the cutscene.
+		if _left_x < 640.0:
+			_flash.anchor_right = 0.5
+		else:
+			_flash.anchor_left = 0.5
 	_fx.add_child(_flash)
 
 	_top_bar = ColorRect.new()

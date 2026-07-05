@@ -55,7 +55,7 @@ const PD := preload("res://scripts/combat/projectile_data.gd")
 # its first frame and plays the scripted UltimateCinematic sequence instead of
 # resolving it as a normal strike. `damage` is the TOTAL dealt across the
 # scripted hits; hitboxes/stun/projectile still author the fallback behaviour
-# (training mode, or a start denied by a live throw, runs the move normally).
+# (a start denied by a live throw runs the move normally).
 @export var is_cinematic: bool = false
 # Which choreography plays (read only when is_cinematic; specs in
 # .local/gamePlan.md): "rush" — The Four Corners, run-in + four punches (Jerb);

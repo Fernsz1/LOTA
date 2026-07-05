@@ -5,6 +5,7 @@
 [ext_resource type="Theme" path="res://art/ui/lota_theme.tres" id="3_theme"]
 
 [node name="QuitConfirm" type="CanvasLayer"]
+layer = 100
 visible = false
 script = ExtResource("1_qc")
 

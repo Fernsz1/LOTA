@@ -39,11 +39,16 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 
 func _on_play_pressed() -> void:
+	MatchSelection.training = false
 	get_tree().change_scene_to_file("res://scenes/player_names.tscn")
 
 
 func _on_training_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/training.tscn")
+	# 7.5 — training now shares the versus select flow (character → stage);
+	# the flag makes stage_select cut to training.tscn instead of the match.
+	# Name entry is skipped: training has no leaderboard.
+	MatchSelection.training = true
+	get_tree().change_scene_to_file("res://scenes/character_select.tscn")
 
 
 func _on_leaderboards_pressed() -> void:
