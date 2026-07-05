@@ -38,20 +38,11 @@ const RECOLOR_SHADER := preload("res://shaders/hud_recolor.gdshader")
 
 const FLASH_TIME: float = 0.17
 const BLINK_TIME: float = 0.35   # half-cycle; full blink ~0.7s
-# LoL-style trailing bar (7.4): the main fill snaps to the new value instantly;
-# a second bar behind it holds the OLD value and drains down to match after a
-# short hold, so a drop reads as an orange chunk peeling off the current bar.
-const TRAIL_HOLD: float = 0.15
-const TRAIL_TIME: float = 0.55
 
 @onready var _portrait := {1: $HUD/P1/Portrait, 2: $HUD/P2/Portrait}
 @onready var _health := {1: $HUD/P1/Health, 2: $HUD/P2/Health}
-@onready var _health_trail := {1: $HUD/P1/HealthTrail, 2: $HUD/P2/HealthTrail}
 @onready var _flash := {1: $HUD/P1/Health/Flash, 2: $HUD/P2/Health/Flash}
 @onready var _meter := {1: $HUD/P1/MeterRow/MeterStack/Meter, 2: $HUD/P2/MeterRow/MeterStack/Meter}
-@onready var _meter_trail := {
-	1: $HUD/P1/MeterRow/MeterStack/MeterTrail, 2: $HUD/P2/MeterRow/MeterStack/MeterTrail,
-}
 @onready var _super_ready := {1: $HUD/P1/MeterRow/Ready, 2: $HUD/P2/MeterRow/Ready}
 @onready var _name := {1: $HUD/P1/Name, 2: $HUD/P2/Name}
 @onready var _pips := {
@@ -64,26 +55,12 @@ const TRAIL_TIME: float = 0.55
 
 var _hp_target := {1: 1.0, 2: 1.0}
 var _meter_target := {1: 0.0, 2: 0.0}
-var _hp_trail_tween := {1: null, 2: null}
-var _meter_trail_tween := {1: null, 2: null}
 var _blink := {1: null, 2: null}
 var _health_material := {1: null, 2: null}     # ShaderMaterial, recolor.tint = fighter's color
 var _meter_material := {1: null, 2: null}      # ShaderMaterial, recolor.tint = PLAYER_ACCENT
 var _portrait_material := {1: null, 2: null}   # ShaderMaterial, recolor.tint = fighter's color
 
 func _ready() -> void:
-	# The P1/P2 fill art (health_fill_blue/red.png, meter_fill_blue/red.png) is
-	# pre-colored, not neutral — modulate MULTIPLIES against those pixels, so
-	# tinting them orange for the trail bar would render a different effective
-	# hue per side (blue*orange != red*orange) and per bar. A flat white
-	# texture makes `texture * modulate == modulate`, so all four trail bars
-	# show the exact same orange regardless of which fill they sit behind.
-	var img := Image.create_empty(1, 1, false, Image.FORMAT_RGBA8)
-	img.fill(Color.WHITE)
-	var white := ImageTexture.create_from_image(img)
-	for player in [1, 2]:
-		_health_trail[player].texture_progress = white
-		_meter_trail[player].texture_progress = white
 	# Health always shows the recolor shader (permanent per-character tint);
 	# the meter toggles it on/off in set_meter() (off for the true-green ready
 	# texture, on while charging). Each bar gets its OWN material instance —
@@ -109,8 +86,7 @@ func set_health(player: int, frac: float) -> void:
 	if f < _hp_target[player]:
 		_pulse_flash(player)
 	_hp_target[player] = f
-	_hp_trail_tween[player] = _update_bar(
-			_health[player], _health_trail[player], _hp_trail_tween[player], f)
+	_health[player].value = f * 100.0
 
 func _pulse_flash(player: int) -> void:
 	var overlay: ColorRect = _flash[player]
@@ -122,7 +98,7 @@ func set_meter(player: int, frac: float) -> void:
 	var f: float = clampf(frac, 0.0, 1.0)
 	_meter_target[player] = f
 	var bar: TextureProgressBar = _meter[player]
-	_meter_trail_tween[player] = _update_bar(bar, _meter_trail[player], _meter_trail_tween[player], f)
+	bar.value = f * 100.0
 	var ready: bool = f >= 1.0
 	if ready:
 		# The ready swap is its own true-green art — showing it THROUGH the
@@ -137,26 +113,6 @@ func set_meter(player: int, frac: float) -> void:
 		_start_blink(player)
 	else:
 		_stop_blink(player)
-
-## Instantly moves `bar` to the new value. If the value dropped, `trail` is left
-## sitting at the old (larger) value and eased down to the new one after a
-## short hold — the sliver of `trail` peeking out past `bar` in that window is
-## the LoL-style "recently lost" chunk. Returns the (possibly new) trail tween
-## so the caller can store it and kill it on the next call.
-func _update_bar(bar: TextureProgressBar, trail: TextureProgressBar,
-		running_trail_tween: Tween, f: float) -> Tween:
-	var old_value: float = bar.value
-	bar.value = f * 100.0
-	if running_trail_tween != null:
-		running_trail_tween.kill()
-	if f * 100.0 < old_value:
-		trail.value = old_value
-		var t := trail.create_tween()
-		t.tween_interval(TRAIL_HOLD)
-		t.tween_property(trail, "value", f * 100.0, TRAIL_TIME).set_trans(Tween.TRANS_SINE)
-		return t
-	trail.value = f * 100.0
-	return null
 
 func _start_blink(player: int) -> void:
 	# SUPER READY! keeps its reserved layout slot always (matches the mock); only its
@@ -214,13 +170,5 @@ func announce(text: String) -> void:
 
 func snap() -> void:
 	for p in [1, 2]:
-		if _hp_trail_tween[p] != null:
-			_hp_trail_tween[p].kill()
-			_hp_trail_tween[p] = null
-		if _meter_trail_tween[p] != null:
-			_meter_trail_tween[p].kill()
-			_meter_trail_tween[p] = null
 		_health[p].value = _hp_target[p] * 100.0
-		_health_trail[p].value = _hp_target[p] * 100.0
 		_meter[p].value = _meter_target[p] * 100.0
-		_meter_trail[p].value = _meter_target[p] * 100.0

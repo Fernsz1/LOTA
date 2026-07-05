@@ -67,11 +67,13 @@ move_skill = ExtResource("9_skill")
 move_ultimate = ExtResource("10_ultimate")
 
 [node name="CombatDebug" type="Node2D" parent="." unique_id=406341039]
+visible = false
 script = ExtResource("4_dbgbox")
 players = Array[NodePath]([NodePath("../P1"), NodePath("../P2")])
 main_path = NodePath("..")
 
 [node name="DebugOverlay" parent="." unique_id=2021885996 instance=ExtResource("2_dbgovl")]
+visible = false
 
 [node name="MatchHUD" parent="." unique_id=327837239 instance=ExtResource("7_mhud")]
 

@@ -39,6 +39,20 @@ font_color = Color(0.91, 0.518, 0.173, 1)
 outline_size = 6
 outline_color = Color(0, 0, 0, 1)
 
+[sub_resource type="LabelSettings" id="LS_round"]
+font = ExtResource("2_bangers")
+font_size = 26
+font_color = Color(0.91, 0.518, 0.173, 1)
+outline_size = 4
+outline_color = Color(0, 0, 0, 1)
+
+[sub_resource type="LabelSettings" id="LS_sigabo"]
+font = ExtResource("2_bangers")
+font_size = 20
+font_color = Color(0.651, 1, 0, 1)
+outline_size = 3
+outline_color = Color(0, 0, 0, 1)
+
 [node name="MatchHUD" type="CanvasLayer"]
 script = ExtResource("1_mhud")
 
@@ -129,18 +143,6 @@ fill_mode = 0
 nine_patch_stretch = true
 texture_progress = ExtResource("5_htrk")
 
-[node name="HealthTrail" type="TextureProgressBar" parent="HUD/P1"]
-offset_left = 170.0
-offset_top = 92.0
-offset_right = 730.0
-offset_bottom = 138.0
-modulate = Color(1, 0.55, 0.1, 1)
-max_value = 100.0
-step = 0.01
-value = 100.0
-fill_mode = 0
-nine_patch_stretch = true
-
 [node name="Health" type="TextureProgressBar" parent="HUD/P1"]
 offset_left = 170.0
 offset_top = 92.0
@@ -170,9 +172,8 @@ theme_override_constants/separation = 12
 alignment = 0
 
 [node name="MeterLabel" type="Label" parent="HUD/P1/MeterRow"]
-theme_override_colors/font_color = Color(0.651, 1, 0, 1)
 text = "SIGABO"
-label_settings = null
+label_settings = SubResource("LS_sigabo")
 
 [node name="MeterStack" type="Control" parent="HUD/P1/MeterRow"]
 custom_minimum_size = Vector2(0, 22)
@@ -189,17 +190,6 @@ value = 100.0
 fill_mode = 0
 nine_patch_stretch = true
 texture_progress = ExtResource("8_mtrk")
-
-[node name="MeterTrail" type="TextureProgressBar" parent="HUD/P1/MeterRow/MeterStack"]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-modulate = Color(1, 0.55, 0.1, 1)
-max_value = 100.0
-step = 0.01
-value = 0.0
-fill_mode = 0
-nine_patch_stretch = true
 
 [node name="Meter" type="TextureProgressBar" parent="HUD/P1/MeterRow/MeterStack"]
 anchors_preset = 15
@@ -306,18 +296,6 @@ fill_mode = 1
 nine_patch_stretch = true
 texture_progress = ExtResource("5_htrk")
 
-[node name="HealthTrail" type="TextureProgressBar" parent="HUD/P2"]
-offset_left = 50.0
-offset_top = 92.0
-offset_right = 610.0
-offset_bottom = 138.0
-modulate = Color(1, 0.55, 0.1, 1)
-max_value = 100.0
-step = 0.01
-value = 100.0
-fill_mode = 1
-nine_patch_stretch = true
-
 [node name="Health" type="TextureProgressBar" parent="HUD/P2"]
 offset_left = 50.0
 offset_top = 92.0
@@ -369,17 +347,6 @@ fill_mode = 1
 nine_patch_stretch = true
 texture_progress = ExtResource("8_mtrk")
 
-[node name="MeterTrail" type="TextureProgressBar" parent="HUD/P2/MeterRow/MeterStack"]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-modulate = Color(1, 0.55, 0.1, 1)
-max_value = 100.0
-step = 0.01
-value = 0.0
-fill_mode = 1
-nine_patch_stretch = true
-
 [node name="Meter" type="TextureProgressBar" parent="HUD/P2/MeterRow/MeterStack"]
 anchors_preset = 15
 anchor_right = 1.0
@@ -392,8 +359,8 @@ nine_patch_stretch = true
 texture_progress = ExtResource("10_mfr")
 
 [node name="MeterLabel" type="Label" parent="HUD/P2/MeterRow"]
-theme_override_colors/font_color = Color(0.651, 1, 0, 1)
 text = "SIGABO"
+label_settings = SubResource("LS_sigabo")
 
 [node name="Center" type="Control" parent="HUD"]
 anchor_left = 0.5
@@ -410,7 +377,7 @@ mouse_filter = 2
 offset_right = 200.0
 offset_bottom = 28.0
 horizontal_alignment = 1
-theme_override_colors/font_color = Color(0.91, 0.518, 0.173, 1)
+label_settings = SubResource("LS_round")
 text = "ROUND 1"
 
 [node name="TimerPlate" type="TextureRect" parent="HUD/Center"]

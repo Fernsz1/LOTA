@@ -28,38 +28,13 @@ func _initialize() -> void:
 	_check(is_equal_approx(hud._health[1].value, 50.0), "P1 health bar -> 50")
 	_check(is_equal_approx(hud._health[2].value, 25.0), "P2 health bar -> 25")
 
-	# taking damage raises the flash overlay; main bar snaps instantly (7.4:
-	# LoL-style), the trail bar is left at the old value to drain down
+	# taking damage raises the flash overlay; the bar snaps instantly to the
+	# new value (no orange trailing bar — removed per request)
 	hud.set_health(1, 1.0)
 	hud.snap()
 	hud.set_health(1, 0.6)   # a drop -> flash
 	_check(hud._flash[1].modulate.a > 0.0, "damage raises P1 hit-flash")
 	_check(is_equal_approx(hud._health[1].value, 60.0), "P1 health bar snaps instantly to 60")
-	_check(is_equal_approx(hud._health_trail[1].value, 100.0),
-			"P1 health trail holds the old value (100) right after the drop")
-	_check(hud._hp_trail_tween[1] != null, "a drop starts the trail drain tween")
-	hud.snap()
-	_check(is_equal_approx(hud._health[1].value, 60.0), "snap keeps P1 health at target")
-	_check(is_equal_approx(hud._health_trail[1].value, 60.0), "snap catches the trail bar up to target")
-
-	# a gain (no damage) keeps the trail in sync — no orange sliver to show
-	hud.set_health(2, 0.5)
-	hud.snap()
-	hud.set_health(2, 0.8)
-	_check(is_equal_approx(hud._health_trail[2].value, 80.0),
-			"a health increase syncs the trail immediately (nothing to peel off)")
-
-	# 7.4 fix: the P1/P2 fill art is pre-colored (blue/red), so tinting it
-	# orange via modulate would multiply against those pixels and render a
-	# DIFFERENT effective hue per side. All four trail bars must share one
-	# neutral (white) texture so the same orange modulate looks identical
-	# everywhere regardless of which side's fill they sit behind.
-	_check(hud._health_trail[1].texture_progress == hud._health_trail[2].texture_progress
-			and hud._health_trail[1].texture_progress == hud._meter_trail[1].texture_progress
-			and hud._health_trail[1].texture_progress == hud._meter_trail[2].texture_progress,
-			"all four trail bars share one neutral texture (consistent orange both sides)")
-	var trail_img: Image = hud._health_trail[1].texture_progress.get_image()
-	_check(trail_img.get_pixel(0, 0) == Color.WHITE, "the shared trail texture is neutral white")
 
 	# meter below full: player fill, ready hidden, blink stopped. 7.4: the
 	# recharge bar renders through the recolor shader tinted brand orange —

@@ -1,7 +1,8 @@
 extends CanvasLayer
 ## Read-only debug HUD: frame, FPS, per-player FSM state and input history.
-## Toggle with the `debug_panel` action (F2). Starts in whatever state
-## `visible` is set to in the scene (training = off, match = on).
+## Toggle with the `debug_panel` action (F2). Off by default in both training
+## and versus (main.gd/training_main.gd force it at _ready()) — a real match
+## never shows this panel unless F2 is pressed.
 ## Cosmetic → updates in _process; never writes game state.
 
 @onready var _frame_label: Label = $Panel/VBox/Frame

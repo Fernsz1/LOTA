@@ -1,8 +1,9 @@
 extends Node2D
 ## Box renderer for development and training mode (reused by 4.3).
 ## Draws all players' boxes colour-coded and projectile hitboxes.
-## Toggle with the `debug_boxes` action (F1). Starts in whatever state
-## `visible` is set to in the scene (training = off, match = on).
+## Toggle with the `debug_boxes` action (F1). Off by default in both training
+## and versus (main.gd/training_main.gd force it at _ready()) — a real match
+## never shows debug boxes unless F1 is pressed.
 ## Green = hurtbox, red = hitbox, yellow = pushbox (outline), purple = grab box.
 
 const COL_HURT: Color = Color(0.2, 0.8, 0.3, 0.45)
