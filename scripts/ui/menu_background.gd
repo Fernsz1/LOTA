@@ -1,11 +1,21 @@
 extends Control
-## Procedural sunset-island backdrop shared by the menu screens.
-## Painted art can be assigned to `art` later: it fills ArtSlot above the
-## procedural layers (which auto-hide) while the vignette stays on top.
+## Procedural sunset-island backdrop shared by the menu screens (main menu,
+## stage select, character select). Painted art can be assigned to `art`
+## directly: it fills ArtSlot above the procedural layers (which auto-hide)
+## while the vignette stays on top.
+##
+## Always shows the same fixed backdrop (background_0) — menus intentionally
+## don't randomize. For the randomized in-match arena backdrop, see
+## `scripts/match/arena_background.gd`, which is a plain Sprite2D (this
+## script's Control-based anchoring only resolves under a Control/CanvasLayer
+## parent, which the Node2D-rooted fight scene isn't).
 
 const PROCEDURAL_LAYERS: Array[String] = [
 	"Sky", "Sea", "SunGlow", "SunCore", "Islands", "PalmLeft", "PalmRight",
 ]
+
+## Fixed backdrop used by all menu screens.
+const MENU_BACKGROUND := "res://art/ui/backgrounds/background_0.png"
 
 @export var art: Texture2D = null: set = _set_art
 @export_range(0.0, 1.0) var glow_strength := 1.0: set = _set_glow_strength
@@ -17,6 +27,8 @@ const PROCEDURAL_LAYERS: Array[String] = [
 
 
 func _ready() -> void:
+	if art == null:
+		art = load(MENU_BACKGROUND)
 	_apply_art()
 	_apply_glow()
 	if animate:

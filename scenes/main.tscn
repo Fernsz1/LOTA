@@ -3,22 +3,23 @@
 [ext_resource type="Script" uid="uid://c7arkarndwbf8" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" uid="uid://bmkrf5kiynq8k" path="res://scenes/debug_overlay.tscn" id="2_dbgovl"]
 [ext_resource type="PackedScene" uid="uid://bmkrf5josp6lk" path="res://scenes/character_box.tscn" id="3_charbox"]
-[ext_resource type="Script" path="res://scripts/combat/combat_debug.gd" id="4_dbgbox"]
+[ext_resource type="Script" uid="uid://omskgkc112e0" path="res://scripts/combat/combat_debug.gd" id="4_dbgbox"]
 [ext_resource type="Resource" path="res://characters/jerb/moves/jab.tres" id="5_jab"]
 [ext_resource type="Resource" path="res://characters/jerb/moves/heavy.tres" id="6_heavy"]
-[ext_resource type="Resource" path="res://characters/jerb/moves/skill.tres" id="9_skill"]
+[ext_resource type="PackedScene" uid="uid://d2aun7w274ukm" path="res://scenes/match_hud.tscn" id="7_mhud"]
+[ext_resource type="Script" uid="uid://baj2epbktii75" path="res://scripts/match/match_manager.gd" id="8_mmgr"]
+[ext_resource type="Resource" uid="uid://ou45h5t2avyy" path="res://characters/jerb/moves/skill.tres" id="9_skill"]
 [ext_resource type="Resource" path="res://characters/jerb/moves/ultimate.tres" id="10_ultimate"]
-[ext_resource type="PackedScene" path="res://scenes/match_hud.tscn" id="7_mhud"]
-[ext_resource type="Script" path="res://scripts/match/match_manager.gd" id="8_mmgr"]
-[ext_resource type="Resource" path="res://characters/jerb/jerb_data.tres" id="11_jerbdata"]
+[ext_resource type="Resource" uid="uid://dgn8y8o55joce" path="res://characters/jerb/jerb_data.tres" id="11_jerbdata"]
 [ext_resource type="Resource" path="res://characters/rainne/rainne_data.tres" id="12_rainnedata"]
 [ext_resource type="PackedScene" path="res://scenes/quit_confirm.tscn" id="13_quitconfirm"]
+[ext_resource type="Script" uid="uid://cex3q48abwgj4" path="res://scripts/match/arena_background.gd" id="14_arenabg"]
+[ext_resource type="Texture2D" uid="uid://841s5k04abwf" path="res://art/ui/backgrounds/ground.png" id="15_ground"]
 
 [node name="Main" type="Node2D" unique_id=175851764]
 script = ExtResource("1_main")
 
-[node name="Background" type="ColorRect" parent="."]
-layout_mode = 1
+[node name="Background" type="ColorRect" parent="." unique_id=1645748074]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -26,17 +27,26 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.07, 0.08, 0.11, 1)
 
+[node name="ArenaBackground" type="Sprite2D" parent="." unique_id=1030822331]
+script = ExtResource("14_arenabg")
+
 [node name="Floor" type="ColorRect" parent="." unique_id=180430301]
 offset_top = 560.0
-offset_right = 1147.0
-offset_bottom = 570.0
-color = Color(0.25, 0.25, 0.25, 1)
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0, 0, 0, 1)
 
-[node name="Camera" type="Camera2D" parent="."]
+[node name="Ground" type="Sprite2D" parent="." unique_id=1943131370]
+position = Vector2(640, 358)
+scale = Vector2(0.7215333, 0.7215333)
+texture = ExtResource("15_ground")
+
+[node name="Camera" type="Camera2D" parent="." unique_id=43100067]
 position = Vector2(640, 360)
 
 [node name="P1" parent="." unique_id=841665642 instance=ExtResource("3_charbox")]
 position = Vector2(400, 560)
+scale = Vector2(1.5, 1.5)
 box_color = Color(0.2, 0.5, 0.9, 1)
 character_data = ExtResource("11_jerbdata")
 move_fast = ExtResource("5_jab")
@@ -46,6 +56,7 @@ move_ultimate = ExtResource("10_ultimate")
 
 [node name="P2" parent="." unique_id=1624087936 instance=ExtResource("3_charbox")]
 position = Vector2(880, 560)
+scale = Vector2(1.5, 1.5)
 player_index = 2
 facing = -1
 box_color = Color(0.35, 0.55, 1, 1)
@@ -55,19 +66,19 @@ move_heavy = ExtResource("6_heavy")
 move_skill = ExtResource("9_skill")
 move_ultimate = ExtResource("10_ultimate")
 
-[node name="CombatDebug" type="Node2D" parent="."]
+[node name="CombatDebug" type="Node2D" parent="." unique_id=406341039]
 script = ExtResource("4_dbgbox")
-players = [NodePath("../P1"), NodePath("../P2")]
+players = Array[NodePath]([NodePath("../P1"), NodePath("../P2")])
 main_path = NodePath("..")
 
 [node name="DebugOverlay" parent="." unique_id=2021885996 instance=ExtResource("2_dbgovl")]
 
-[node name="MatchHUD" parent="." instance=ExtResource("7_mhud")]
+[node name="MatchHUD" parent="." unique_id=327837239 instance=ExtResource("7_mhud")]
 
-[node name="MatchManager" type="Node" parent="."]
+[node name="MatchManager" type="Node" parent="." unique_id=761145046]
 script = ExtResource("8_mmgr")
 p1_path = NodePath("../P1")
 p2_path = NodePath("../P2")
 hud_path = NodePath("../MatchHUD")
 
-[node name="QuitConfirm" parent="." instance=ExtResource("13_quitconfirm")]
+[node name="QuitConfirm" parent="." unique_id=887824190 instance=ExtResource("13_quitconfirm")]
