@@ -1,8 +1,9 @@
 @tool
 extends Node2D
 ## Edit-time baker for the Map Select screen. Reads the raw GeoJSON, projects
-## lon/lat into a 1920x1080 design space, groups 17 admin regions into 5 macro-
-## regions, and bakes persistent Area2D/Polygon2D/Line2D/CollisionPolygon2D nodes.
+## lon/lat into a 1280x720 design space, groups 17 admin regions into 5 macro-
+## regions, and bakes persistent Node2D/Polygon2D/Line2D nodes (hit-testing is
+## geometric at runtime — no Area2D/CollisionPolygon2D).
 
 const Data := preload("res://scenes/ui/map_select/map_manager.gd")
 
@@ -124,17 +125,20 @@ const OUTLINE_SHADER := "res://scenes/ui/map_select/outline.gdshader"
 			clear()
 
 func clear() -> void:
-	for c in get_children():
-		if c is Area2D:
-			c.free()  # immediate: editor re-bake must not double up
+	_free_regions(self)
 
 func build() -> void:
 	build_into(self)
 
-func build_into(target: Node2D) -> void:
+## Free previously baked region roots (matched by macro-region name, since they
+## are plain Node2D). Immediate free so an editor re-bake doesn't double up.
+func _free_regions(target: Node2D) -> void:
 	for c in target.get_children():
-		if c is Area2D:
+		if Data.REGIONS.has(String(c.name)):
 			c.free()
+
+func build_into(target: Node2D) -> void:
+	_free_regions(target)
 	var txt := FileAccess.get_file_as_string(SOURCE)
 	if txt.is_empty():
 		push_error("Map source not found or empty: " + SOURCE)
@@ -160,21 +164,24 @@ func build_into(target: Node2D) -> void:
 			if pts.size() >= 3:
 				rings_by_region[gid].append(pts)
 
-	var tree := get_tree()
+	var tree := get_tree() if is_inside_tree() else null
 	var owner_root: Node = tree.edited_scene_root if tree else null
 	for gid in Data.REGIONS:
 		_bake_region_into(target, gid, rings_by_region[gid], owner_root)
 
 func _bake_region_into(target: Node2D, gid: String, rings: Array, owner_root: Node) -> void:
-	var area := Area2D.new()
-	area.name = gid
-	target.add_child(area)
+	# Region root is a plain Node2D — hit-testing is done at runtime with
+	# Geometry2D.is_point_in_polygon (map_manager), avoiding CollisionPolygon2D
+	# convex decomposition entirely (fails on self-touching coastline rings).
+	var region := Node2D.new()
+	region.name = gid
+	target.add_child(region)
 	if owner_root:
-		area.set_owner(owner_root)
+		region.set_owner(owner_root)
 
 	var visual := Node2D.new()
 	visual.name = "Visual"
-	area.add_child(visual)
+	region.add_child(visual)
 	if owner_root:
 		visual.set_owner(owner_root)
 
@@ -206,9 +213,3 @@ func _bake_region_into(target: Node2D, gid: String, rings: Array, owner_root: No
 		visual.add_child(line)
 		if owner_root:
 			line.set_owner(owner_root)
-		# collision (sibling of Visual, under Area2D)
-		var col := CollisionPolygon2D.new()
-		col.polygon = pts
-		area.add_child(col)
-		if owner_root:
-			col.set_owner(owner_root)

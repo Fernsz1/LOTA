@@ -41,31 +41,64 @@ const HOVER_OUTLINE := 4.0  # modest thickening on hover
 
 @export var label_path: NodePath
 
+var _hovered: Node2D = null
+
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
-	_connect_regions()
+	set_process_unhandled_input(true)
 
-func _connect_regions() -> void:
+## The 5 baked region roots (plain Node2D, named by macro-region id).
+func _regions() -> Array[Node2D]:
+	var out: Array[Node2D] = []
 	for gid in REGIONS:
-		var area := get_node_or_null(NodePath(gid)) as Area2D
-		if area == null:
+		var r := get_node_or_null(NodePath(gid)) as Node2D
+		if r != null:
+			out.append(r)
+	return out
+
+func _visual_of(region: Node2D) -> Node2D:
+	return region.get_node_or_null("Visual") as Node2D
+
+## First region whose fill polygons contain global_pos. Tested in region-local
+## space so the animated hover lift (Visual.position.y) doesn't shift the hit area.
+func _region_at(global_pos: Vector2) -> Node2D:
+	for region in _regions():
+		var visual := _visual_of(region)
+		if visual == null:
 			continue
-		area.input_pickable = true
-		if not area.mouse_entered.is_connected(_on_hover_in):
-			area.mouse_entered.connect(_on_hover_in.bind(area))
-			area.mouse_exited.connect(_on_hover_out.bind(area))
-			area.input_event.connect(_on_region_input.bind(area))
+		var local := region.to_local(global_pos)
+		for child in visual.get_children():
+			if child is Polygon2D and Geometry2D.is_point_in_polygon(local, child.polygon):
+				return region
+	return null
 
-func _visual_of(area: Area2D) -> Node2D:
-	return area.get_node_or_null("Visual") as Node2D
+func _unhandled_input(event: InputEvent) -> void:
+	if Engine.is_editor_hint():
+		return
+	if event is InputEventMouseMotion:
+		_update_hover(get_global_mouse_position())
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		var region := _region_at(get_global_mouse_position())
+		if region != null:
+			_select(region)
 
-func _on_hover_in(area: Area2D) -> void:
-	var gid := String(area.name)
-	var visual := _visual_of(area)
+func _update_hover(global_pos: Vector2) -> void:
+	var region := _region_at(global_pos)
+	if region == _hovered:
+		return
+	if _hovered != null:
+		_apply_hover_out(_hovered)
+	_hovered = region
+	if _hovered != null:
+		_apply_hover_in(_hovered)
+
+func _apply_hover_in(region: Node2D) -> void:
+	var gid := String(region.name)
+	var visual := _visual_of(region)
 	if visual == null:
 		return
-	area.z_index = 1
+	region.z_index = 1
 	var neon: Color = REGIONS[gid]["neon"]
 	for child in visual.get_children():
 		if child is Polygon2D:
@@ -77,11 +110,11 @@ func _on_hover_in(area: Area2D) -> void:
 	tw.tween_property(visual, "position:y", HOVER_LIFT, 0.35)
 	_set_label(REGIONS[gid]["display"])
 
-func _on_hover_out(area: Area2D) -> void:
-	var visual := _visual_of(area)
+func _apply_hover_out(region: Node2D) -> void:
+	var visual := _visual_of(region)
 	if visual == null:
 		return
-	area.z_index = 0
+	region.z_index = 0
 	for child in visual.get_children():
 		if child is Polygon2D:
 			child.color = BASE_COLOR
@@ -92,17 +125,13 @@ func _on_hover_out(area: Area2D) -> void:
 	tw.tween_property(visual, "position:y", 0.0, 0.35)
 	_set_label("")
 
-func _on_region_input(_viewport: Node, event: InputEvent, _shape_idx: int, area: Area2D) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		_select(area)
-
-func _select(area: Area2D) -> void:
-	var gid := String(area.name)
+func _select(region: Node2D) -> void:
+	var gid := String(region.name)
 	var display: String = REGIONS[gid]["display"]
 	var stage_path: String = REGIONS[gid]["stage"]
 	region_selected.emit(display, stage_path)
-	# Autoload access under --script mode: bare identifier is unavailable.
-	var main_loop: SceneTree = get_tree()
+	# Autoload reached via the tree root: the bare identifier is unavailable in --script mode.
+	var main_loop: SceneTree = get_tree() if is_inside_tree() else null
 	var ms: Node = main_loop.root.get_node_or_null("MatchSelection") if main_loop else null
 	if ms and ResourceLoader.exists(stage_path):
 		ms.stage_data = load(stage_path)

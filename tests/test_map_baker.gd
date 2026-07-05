@@ -22,35 +22,36 @@ func _init() -> void:
 	get_root().add_child(root)
 	root.build()
 
-	# exactly 5 region Area2Ds, named by macro-region id
-	var area_names := {}
+	# exactly 5 region Node2Ds, named by macro-region id
+	var region_names := {}
 	for c in root.get_children():
-		if c is Area2D:
-			area_names[c.name] = c
-	ok(area_names.size() == 5, "5 Area2D regions baked (got %d)" % area_names.size())
+		if Data.REGIONS.has(String(c.name)):
+			region_names[String(c.name)] = c
+	ok(region_names.size() == 5, "5 region nodes baked (got %d)" % region_names.size())
 	for gid in Data.REGIONS:
-		ok(area_names.has(gid), "region baked: " + gid)
+		ok(region_names.has(gid), "region baked: " + gid)
 
-	# each region has a Visual node + >=1 Polygon2D + >=1 Line2D + >=1 CollisionPolygon2D
-	for gid in area_names:
-		var area: Area2D = area_names[gid]
-		var visual := area.get_node_or_null("Visual")
+	# each region has a Visual node + >=1 Polygon2D + >=1 Line2D; NO CollisionPolygon2D
+	# (hit-testing is point-in-polygon at runtime, not Area2D collision)
+	for gid in region_names:
+		var region: Node2D = region_names[gid]
+		var visual := region.get_node_or_null("Visual")
 		ok(visual != null, gid + " has Visual node")
 		var polys := 0
 		var lines := 0
-		var cols := 0
 		if visual:
 			for v in visual.get_children():
 				if v is Polygon2D: polys += 1
 				elif v is Line2D: lines += 1
-		for a in area.get_children():
+		var cols := 0
+		for a in region.get_children():
 			if a is CollisionPolygon2D: cols += 1
 		ok(polys >= 1, gid + " has >=1 Polygon2D (got %d)" % polys)
 		ok(lines >= 1, gid + " has >=1 Line2D (got %d)" % lines)
-		ok(cols >= 1, gid + " has >=1 CollisionPolygon2D (got %d)" % cols)
+		ok(cols == 0, gid + " has no CollisionPolygon2D (got %d)" % cols)
 
 	# base fill color applied
-	var first: Area2D = area_names[area_names.keys()[0]]
+	var first: Node2D = region_names[region_names.keys()[0]]
 	var poly0: Polygon2D = null
 	for v in first.get_node("Visual").get_children():
 		if v is Polygon2D:
@@ -62,8 +63,8 @@ func _init() -> void:
 	root.clear()
 	var remaining := 0
 	for c in root.get_children():
-		if c is Area2D: remaining += 1
-	ok(remaining == 0, "clear() frees region Area2Ds")
+		if Data.REGIONS.has(String(c.name)): remaining += 1
+	ok(remaining == 0, "clear() frees region nodes")
 
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
