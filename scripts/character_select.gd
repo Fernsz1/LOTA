@@ -532,7 +532,7 @@ func _maybe_advance() -> void:
 	MatchSelection.p2_data = p2["data"]
 	MatchSelection.p2_color = p2["color"]
 
-	get_tree().change_scene_to_file("res://scenes/stage_select.tscn")
+	get_tree().change_scene_to_file("res://scenes/ui/map_select/MapSelection.tscn")
 
 
 func _on_back_pressed() -> void:

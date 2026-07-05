@@ -20,6 +20,10 @@ mono_crash.*.json
 .local/
 CLAUDE.local.md
 
+# Python bytecode (from the offline map-region bake script)
+__pycache__/
+*.pyc
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db
