@@ -86,7 +86,12 @@ func clear() -> void:
 			c.free()  # immediate: editor re-bake must not double up
 
 func build() -> void:
-	clear()
+	build_into(self)
+
+func build_into(target: Node2D) -> void:
+	for c in target.get_children():
+		if c is Area2D:
+			c.free()
 	var txt := FileAccess.get_file_as_string(SOURCE)
 	if txt.is_empty():
 		push_error("Map source not found or empty: " + SOURCE)
@@ -112,12 +117,12 @@ func build() -> void:
 	var tree := get_tree()
 	var owner_root: Node = tree.edited_scene_root if tree else null
 	for gid in Data.REGIONS:
-		_bake_region(gid, rings_by_region[gid], owner_root)
+		_bake_region_into(target, gid, rings_by_region[gid], owner_root)
 
-func _bake_region(gid: String, rings: Array, owner_root: Node) -> void:
+func _bake_region_into(target: Node2D, gid: String, rings: Array, owner_root: Node) -> void:
 	var area := Area2D.new()
 	area.name = gid
-	add_child(area)
+	target.add_child(area)
 	if owner_root:
 		area.set_owner(owner_root)
 
