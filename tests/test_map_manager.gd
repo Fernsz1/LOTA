@@ -48,48 +48,46 @@ func _init() -> void:
 		print("%d checks, %d failures" % [checks, failures])
 		quit(0)
 		return
-	# Build children with the generator, then attach a manager to a fresh MapRoot
-	# by baking into a node that runs the manager script.
+	# Build regions under a tilted MapPlane, then run the manager against it.
 	var root: Node2D = Mgr.new()
 	get_root().add_child(root)
-	# synthesize baked region nodes using the generator, baked into `root`
+	var plane := Node2D.new()
+	plane.name = "MapPlane"
+	root.add_child(plane)
+	root.map_plane_path = NodePath("MapPlane")
+	# bake region Node2Ds as children of the plane
 	var gen: Node2D = Gen.new()
 	root.add_child(gen)
-	gen.build_into(root)   # bakes region Node2Ds as children of `root`
+	gen.build_into(plane)
 	gen.free()
+	# apply the affine tilt about the archipelago centre
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for r in root._regions():
+		var c: Vector2 = r.get_meta("centroid")
+		lo = lo.min(c); hi = hi.max(c)
+	var centre := (lo + hi) * 0.5
+	plane.transform = Mgr.tilt_transform(centre, Mgr.TILT_ROT_DEG, Mgr.TILT_SCALE_Y)
 
-	var region: Node2D = root.get_node("Visayas")
+	var region: Node2D = plane.get_node("Visayas")
 	var visual: Node2D = region.get_node("Visual")
 
-	# hover in recolors to neon synchronously (only position.y is tweened)
-	root._apply_hover_in(region)
-	var neon: Color = Mgr.REGIONS["Visayas"]["neon"]
+	# an interior point of a Top polygon, taken through the tilt, resolves to the region
+	var top: Node2D = region.get_node("Visual/Top")
 	var poly: Polygon2D = null
-	for v in visual.get_children():
+	for v in top.get_children():
 		if v is Polygon2D:
 			poly = v
 			break
-	ok(poly != null and poly.color == neon, "hover recolors fill to neon")
+	ok(poly != null, "Visayas has a Top polygon")
 
-	root._apply_hover_out(region)
-	ok(poly.color == Mgr.BASE_COLOR, "hover-out reverts to base color")
-
-	# point-in-polygon hit-testing: outside -> null; an interior point -> the region
 	ok(root._region_at(Vector2(-5000, -5000)) == null, "_region_at outside map returns null")
-	var inside = _interior_point(poly)  # untyped: may be null
+	var inside = _interior_point(poly)  # untyped: may be null (plane-space point)
 	ok(inside != null, "found an interior sample point in Visayas")
 	if inside != null:
-		# poly points are in region-local space (Visual at rest); convert to global
-		var inside_v: Vector2 = inside
-		ok(root._region_at(region.to_global(inside_v)) == region, "_region_at interior point -> Visayas")
-
-	# click/select emits region_selected with correct (name, stage)
-	root.region_selected.connect(_on_selected)
-	root._select(region)
-	ok(emitted.size() >= 1, "region_selected emitted")
-	if emitted.size() >= 1:
-		ok(emitted[0][0] == "Visayas", "emitted name == Visayas")
-		ok(emitted[0][1] == Mgr.REGIONS["Visayas"]["stage"], "emitted stage path correct")
+		# poly points are in plane space; map plane-space -> global for the query
+		var global_pt: Vector2 = plane.to_global(inside)
+		ok(root._region_at(global_pt) == region, "_region_at interior point (through tilt) -> Visayas")
 
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)

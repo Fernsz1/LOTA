@@ -67,7 +67,12 @@ const HOVER_LIFT := -15.0
 const BASE_OUTLINE := 2.0   # thin resting stroke (matches generator OUTLINE_WIDTH)
 const HOVER_OUTLINE := 4.0  # modest thickening on hover
 
+## Static affine tilt (comic-book diagonal + faked elevation). No 3D.
+const TILT_ROT_DEG := -20.0
+const TILT_SCALE_Y := 0.6560590   # cos(49°)
+
 @export var label_path: NodePath
+@export var map_plane_path: NodePath
 
 var _hovered: Node2D = null
 
@@ -76,11 +81,28 @@ func _ready() -> void:
 		return
 	set_process_unhandled_input(true)
 
+## T(p) = centre + R(rot) * S(1, scale_y) * (p - centre). Squash first, then rotate.
+static func tilt_transform(centre: Vector2, rot_deg: float, scale_y: float) -> Transform2D:
+	var pivot_in := Transform2D(0.0, -centre)
+	var squash := Transform2D(Vector2(1.0, 0.0), Vector2(0.0, scale_y), Vector2.ZERO)
+	var rot := Transform2D(deg_to_rad(rot_deg), Vector2.ZERO)
+	var pivot_out := Transform2D(0.0, centre)
+	return pivot_out * rot * squash * pivot_in
+
+## Node holding the tilted region children (falls back to self for flat trees).
+func _plane() -> Node:
+	if not map_plane_path.is_empty():
+		var p := get_node_or_null(map_plane_path)
+		if p != null:
+			return p
+	return self
+
 ## The 5 baked region roots (plain Node2D, named by macro-region id).
 func _regions() -> Array[Node2D]:
 	var out: Array[Node2D] = []
+	var plane := _plane()
 	for gid in REGIONS:
-		var r := get_node_or_null(NodePath(gid)) as Node2D
+		var r := plane.get_node_or_null(NodePath(gid)) as Node2D
 		if r != null:
 			out.append(r)
 	return out
@@ -96,7 +118,10 @@ func _region_at(global_pos: Vector2) -> Node2D:
 		if visual == null:
 			continue
 		var local := region.to_local(global_pos)
-		for child in visual.get_children():
+		var top := visual.get_node_or_null("Top")  # TEMPORARY — Task 6 formalizes this
+		if top == null:
+			continue
+		for child in top.get_children():
 			if child is Polygon2D and Geometry2D.is_point_in_polygon(local, child.polygon):
 				return region
 	return null
