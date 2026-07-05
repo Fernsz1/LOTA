@@ -6,7 +6,7 @@
 ; fireballs), untechable, round-ending damage. Long whiff recovery is the price.
 ; Played as a "slam" cutscene in versus (7.3; trigger-on-press for now — the
 ; connect-gated whiff rule comes later). The grab itself is the non-cinematic
-; fallback (training mode), same 300 damage either way.
+; fallback (a denied start), same 300 damage either way.
 [resource]
 script = ExtResource("1_move")
 move_name = "earthbreaker"

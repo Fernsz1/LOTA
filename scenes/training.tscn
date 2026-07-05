@@ -4,17 +4,11 @@
 [ext_resource type="PackedScene" uid="uid://bmkrf5kiynq8k" path="res://scenes/debug_overlay.tscn" id="2_dbgovl"]
 [ext_resource type="PackedScene" uid="uid://bmkrf5josp6lk" path="res://scenes/character_box.tscn" id="3_charbox"]
 [ext_resource type="Script" path="res://scripts/combat/combat_debug.gd" id="4_dbgbox"]
-[ext_resource type="Resource" path="res://characters/jerb/moves/jab.tres" id="5_jab"]
-[ext_resource type="Resource" path="res://characters/jerb/moves/heavy.tres" id="6_heavy"]
-[ext_resource type="Resource" path="res://characters/jerb/moves/skill.tres" id="9_skill"]
-[ext_resource type="Resource" path="res://characters/jerb/moves/ultimate.tres" id="10_ultimate"]
+[ext_resource type="PackedScene" path="res://scenes/match_hud.tscn" id="5_mhud"]
 [ext_resource type="PackedScene" path="res://scenes/training_hud.tscn" id="7_thud"]
 [ext_resource type="Script" path="res://scripts/training/training_manager.gd" id="8_tmgr"]
 [ext_resource type="Resource" path="res://characters/jerb/jerb_data.tres" id="11_jerbdata"]
 [ext_resource type="Resource" path="res://characters/rainne/rainne_data.tres" id="12_rainnedata"]
-[ext_resource type="Resource" path="res://characters/rainne/moves/poke.tres" id="13_poke"]
-[ext_resource type="Resource" path="res://characters/rainne/moves/projectile.tres" id="14_rprojmove"]
-[ext_resource type="Resource" path="res://characters/rainne/moves/ultimate.tres" id="15_rultimate"]
 [ext_resource type="PackedScene" path="res://scenes/quit_confirm.tscn" id="16_quitconfirm"]
 
 [node name="Training" type="Node2D"]
@@ -42,47 +36,34 @@ offset_right = 643.0
 offset_bottom = 560.0
 color = Color(0.65, 0.65, 0.65, 0.45)
 
+[node name="Camera" type="Camera2D" parent="."]
+position = Vector2(640, 360)
+
 [node name="P1" parent="." instance=ExtResource("3_charbox")]
 position = Vector2(250, 560)
-box_color = Color(0.2, 0.5, 0.9, 1)
+box_color = Color(0.86, 0.18, 0.16, 1)
 character_data = ExtResource("11_jerbdata")
-move_fast = ExtResource("5_jab")
-move_heavy = ExtResource("6_heavy")
-move_skill = ExtResource("9_skill")
-move_ultimate = ExtResource("10_ultimate")
 
 [node name="P1Dummy" parent="." instance=ExtResource("3_charbox")]
 position = Vector2(540, 560)
 player_index = 3
 facing = -1
-box_color = Color(0.25, 0.55, 0.5, 1)
+box_color = Color(0.95, 0.82, 0.15, 1)
 character_data = ExtResource("12_rainnedata")
-move_fast = ExtResource("13_poke")
-move_heavy = ExtResource("13_poke")
-move_skill = ExtResource("14_rprojmove")
-move_ultimate = ExtResource("15_rultimate")
 
 [node name="P2Dummy" parent="." instance=ExtResource("3_charbox")]
 position = Vector2(740, 560)
 player_index = 4
 facing = 1
-box_color = Color(0.65, 0.4, 0.2, 1)
+box_color = Color(0.86, 0.18, 0.16, 1)
 character_data = ExtResource("11_jerbdata")
-move_fast = ExtResource("5_jab")
-move_heavy = ExtResource("6_heavy")
-move_skill = ExtResource("9_skill")
-move_ultimate = ExtResource("10_ultimate")
 
 [node name="P2" parent="." instance=ExtResource("3_charbox")]
 position = Vector2(1030, 560)
 player_index = 2
 facing = -1
-box_color = Color(0.35, 0.55, 1, 1)
+box_color = Color(0.95, 0.82, 0.15, 1)
 character_data = ExtResource("12_rainnedata")
-move_fast = ExtResource("13_poke")
-move_heavy = ExtResource("13_poke")
-move_skill = ExtResource("14_rprojmove")
-move_ultimate = ExtResource("15_rultimate")
 
 [node name="CombatDebug" type="Node2D" parent="."]
 visible = false
@@ -92,6 +73,8 @@ main_path = NodePath("..")
 
 [node name="DebugOverlay" parent="." instance=ExtResource("2_dbgovl")]
 visible = false
+
+[node name="MatchHUD" parent="." instance=ExtResource("5_mhud")]
 
 [node name="TrainingHUD" parent="." instance=ExtResource("7_thud")]
 
