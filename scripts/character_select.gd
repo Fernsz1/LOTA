@@ -406,18 +406,26 @@ func _info_stylebox(accent: Color) -> StyleBoxFlat:
 	return sb
 
 
+# Pushes a colour to full neon: max out saturation/brightness while keeping hue,
+# so even muted signature colours read as glowing arcade tags.
+func _neon(c: Color) -> Color:
+	return Color.from_hsv(c.h, clampf(c.s + 0.25, 0.7, 1.0), 1.0, 1.0)
+
+
 func _badge_stylebox(accent: Color) -> StyleBoxFlat:
+	var neon := _neon(accent)
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = accent
-	sb.set_border_width_all(3)
-	sb.border_color = INK
+	sb.bg_color = neon
+	sb.set_border_width_all(2)
+	sb.border_color = Color(0, 0, 0, 0.85)
 	sb.content_margin_left = 16
 	sb.content_margin_right = 16
 	sb.content_margin_top = 2
 	sb.content_margin_bottom = 4
-	sb.shadow_color = INK
-	sb.shadow_size = 3
-	sb.shadow_offset = Vector2(5, 5)
+	# Outer neon glow (centred, no offset) instead of a hard drop shadow.
+	sb.shadow_color = Color(neon.r, neon.g, neon.b, 0.6)
+	sb.shadow_size = 13
+	sb.shadow_offset = Vector2.ZERO
 	return sb
 
 
