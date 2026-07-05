@@ -62,10 +62,10 @@ static func ring_area(pts: PackedVector2Array) -> float:
 	return abs(a) * 0.5
 
 const SOURCE := "res://.local/philippines_optimized.json"
-const VIEW := Vector2(1920, 1080)
-const PAD := 80.0
+const VIEW := Vector2(1280, 720)  # match the project's canvas_items base viewport
+const PAD := 60.0
 const MIN_AREA := 8.0        # drop islets smaller than this (projected px^2)
-const OUTLINE_WIDTH := 6.0
+const OUTLINE_WIDTH := 2.0   # thin graphic-novel stroke
 const OUTLINE_SHADER := "res://scenes/ui/map_select/outline.gdshader"
 
 @export var build_map: bool = false:

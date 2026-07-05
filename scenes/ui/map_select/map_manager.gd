@@ -36,7 +36,8 @@ const REGIONS := {
 signal region_selected(region_name: String, stage_name: String)
 
 const HOVER_LIFT := -15.0
-const HOVER_OUTLINE := 12.0
+const BASE_OUTLINE := 2.0   # thin resting stroke (matches generator OUTLINE_WIDTH)
+const HOVER_OUTLINE := 4.0  # modest thickening on hover
 
 @export var label_path: NodePath
 
@@ -85,7 +86,7 @@ func _on_hover_out(area: Area2D) -> void:
 		if child is Polygon2D:
 			child.color = BASE_COLOR
 		elif child is Line2D:
-			child.width = 6.0
+			child.width = BASE_OUTLINE
 	var tw := create_tween()
 	tw.set_trans(Tween.TRANS_SPRING).set_ease(Tween.EASE_OUT)
 	tw.tween_property(visual, "position:y", 0.0, 0.35)
