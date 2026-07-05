@@ -1,8 +1,9 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene format=3 uid="uid://b7t07tmqq182j"]
 
-[ext_resource type="Script" path="res://scripts/main_menu.gd" id="1_menu"]
-[ext_resource type="Script" path="res://scripts/controls_menu.gd" id="2_controls"]
-[ext_resource type="Theme" path="res://art/ui/lota_theme.tres" id="3_theme"]
+[ext_resource type="Script" uid="uid://dhg0i3eothp3g" path="res://scripts/main_menu.gd" id="1_menu"]
+[ext_resource type="Script" uid="uid://ckl8wtr1ppr6k" path="res://scripts/controls_menu.gd" id="2_controls"]
+[ext_resource type="Theme" uid="uid://df2njoxdri3jj" path="res://art/ui/lota_theme.tres" id="3_theme"]
+[ext_resource type="Texture2D" uid="uid://732mjrvcfmsp" path="res://art/ui/logo_transparent.png" id="4_8ln24"]
 [ext_resource type="PackedScene" path="res://scenes/ui/menu_background.tscn" id="4_bg"]
 
 [sub_resource type="Gradient" id="Gradient_title_glow"]
@@ -17,7 +18,7 @@ fill = 1
 fill_from = Vector2(0.5, 0.5)
 fill_to = Vector2(0.5, 1)
 
-[node name="MainMenu" type="Control"]
+[node name="MainMenu" type="Control" unique_id=131948063]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -27,29 +28,30 @@ grow_vertical = 2
 theme = ExtResource("3_theme")
 script = ExtResource("1_menu")
 
-[node name="Background" parent="." instance=ExtResource("4_bg")]
+[node name="Background" parent="." unique_id=1752019176 instance=ExtResource("4_bg")]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
 
-[node name="TitleGlow" type="TextureRect" parent="."]
+[node name="TitleGlow" type="TextureRect" parent="." unique_id=298821029]
 layout_mode = 1
 anchors_preset = -1
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -450.0
-offset_top = -60.0
-offset_right = 450.0
-offset_bottom = 300.0
+offset_left = -444.0
+offset_top = -9.0
+offset_right = 456.0
+offset_bottom = 351.0
 grow_horizontal = 2
 mouse_filter = 2
 texture = SubResource("GradientTexture2D_title_glow")
 expand_mode = 1
 
-[node name="TitleLockup" type="VBoxContainer" parent="."]
+[node name="LogoTransparent" type="Sprite2D" parent="." unique_id=1124928633]
+position = Vector2(653, 186)
+scale = Vector2(0.79259264, 0.79259264)
+texture = ExtResource("4_8ln24")
+
+[node name="TitleLockup" type="VBoxContainer" parent="." unique_id=446787748]
+visible = false
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
@@ -58,47 +60,51 @@ offset_bottom = 236.0
 grow_horizontal = 2
 theme_override_constants/separation = 0
 
-[node name="Kicker" type="Label" parent="TitleLockup"]
+[node name="Kicker" type="Label" parent="TitleLockup" unique_id=793307844]
 layout_mode = 2
 theme_type_variation = &"KickerLabel"
 text = "LEGENDS OF THE"
 horizontal_alignment = 1
 
-[node name="TitleMain" type="Label" parent="TitleLockup"]
+[node name="TitleMain" type="Label" parent="TitleLockup" unique_id=755266535]
 layout_mode = 2
 theme_type_variation = &"TitleLabel"
 text = "ARCHIPELAGO"
 horizontal_alignment = 1
 
-[node name="CenterButtons" type="CenterContainer" parent="."]
+[node name="CenterButtons" type="CenterContainer" parent="." unique_id=1031214947]
 layout_mode = 1
 anchors_preset = -1
 anchor_top = 0.16
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = -2.0
+offset_top = 28.800003
+offset_right = -2.0
+offset_bottom = -2.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBox" type="VBoxContainer" parent="CenterButtons"]
+[node name="VBox" type="VBoxContainer" parent="CenterButtons" unique_id=352412277]
 layout_mode = 2
 theme_override_constants/separation = 18
 
-[node name="PlayButton" type="Button" parent="CenterButtons/VBox"]
+[node name="PlayButton" type="Button" parent="CenterButtons/VBox" unique_id=1414453406]
 custom_minimum_size = Vector2(320, 64)
 layout_mode = 2
 text = "PLAY"
 
-[node name="TrainingButton" type="Button" parent="CenterButtons/VBox"]
+[node name="TrainingButton" type="Button" parent="CenterButtons/VBox" unique_id=79654712]
 custom_minimum_size = Vector2(320, 64)
 layout_mode = 2
 text = "TRAINING"
 
-[node name="LeaderboardsButton" type="Button" parent="CenterButtons/VBox"]
+[node name="LeaderboardsButton" type="Button" parent="CenterButtons/VBox" unique_id=209462602]
 custom_minimum_size = Vector2(320, 64)
 layout_mode = 2
 text = "LEADERBOARDS"
 
-[node name="SettingsButton" type="Button" parent="."]
+[node name="SettingsButton" type="Button" parent="." unique_id=250603396]
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
@@ -111,7 +117,7 @@ grow_horizontal = 0
 theme_type_variation = &"GhostButton"
 text = "SETTINGS"
 
-[node name="SettingsPanel" type="Control" parent="."]
+[node name="SettingsPanel" type="Control" parent="." unique_id=1903455288]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -120,7 +126,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Dim" type="ColorRect" parent="SettingsPanel"]
+[node name="Dim" type="ColorRect" parent="SettingsPanel" unique_id=739193284]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -129,7 +135,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.65)
 
-[node name="Panel" type="PanelContainer" parent="SettingsPanel"]
+[node name="Panel" type="PanelContainer" parent="SettingsPanel" unique_id=1130736140]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -143,26 +149,26 @@ offset_bottom = 220.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBox" type="VBoxContainer" parent="SettingsPanel/Panel"]
+[node name="VBox" type="VBoxContainer" parent="SettingsPanel/Panel" unique_id=128424559]
 layout_mode = 2
 theme_override_constants/separation = 18
 
-[node name="SettingsTitle" type="Label" parent="SettingsPanel/Panel/VBox"]
+[node name="SettingsTitle" type="Label" parent="SettingsPanel/Panel/VBox" unique_id=490500792]
 layout_mode = 2
 theme_type_variation = &"PanelTitleLabel"
 text = "SETTINGS"
 horizontal_alignment = 1
 
-[node name="MasterVolumeRow" type="HBoxContainer" parent="SettingsPanel/Panel/VBox"]
+[node name="MasterVolumeRow" type="HBoxContainer" parent="SettingsPanel/Panel/VBox" unique_id=179921723]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="MasterVolumeLabel" type="Label" parent="SettingsPanel/Panel/VBox/MasterVolumeRow"]
+[node name="MasterVolumeLabel" type="Label" parent="SettingsPanel/Panel/VBox/MasterVolumeRow" unique_id=2033033695]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 text = "Master Volume"
 
-[node name="MasterVolumeSlider" type="HSlider" parent="SettingsPanel/Panel/VBox/MasterVolumeRow"]
+[node name="MasterVolumeSlider" type="HSlider" parent="SettingsPanel/Panel/VBox/MasterVolumeRow" unique_id=1092031188]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -170,16 +176,16 @@ max_value = 1.0
 step = 0.05
 value = 1.0
 
-[node name="MusicVolumeRow" type="HBoxContainer" parent="SettingsPanel/Panel/VBox"]
+[node name="MusicVolumeRow" type="HBoxContainer" parent="SettingsPanel/Panel/VBox" unique_id=2112133789]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="MusicVolumeLabel" type="Label" parent="SettingsPanel/Panel/VBox/MusicVolumeRow"]
+[node name="MusicVolumeLabel" type="Label" parent="SettingsPanel/Panel/VBox/MusicVolumeRow" unique_id=1115342350]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 text = "Music Volume"
 
-[node name="MusicVolumeSlider" type="HSlider" parent="SettingsPanel/Panel/VBox/MusicVolumeRow"]
+[node name="MusicVolumeSlider" type="HSlider" parent="SettingsPanel/Panel/VBox/MusicVolumeRow" unique_id=554659677]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -187,16 +193,16 @@ max_value = 1.0
 step = 0.05
 value = 1.0
 
-[node name="SFXVolumeRow" type="HBoxContainer" parent="SettingsPanel/Panel/VBox"]
+[node name="SFXVolumeRow" type="HBoxContainer" parent="SettingsPanel/Panel/VBox" unique_id=1980182787]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="SFXVolumeLabel" type="Label" parent="SettingsPanel/Panel/VBox/SFXVolumeRow"]
+[node name="SFXVolumeLabel" type="Label" parent="SettingsPanel/Panel/VBox/SFXVolumeRow" unique_id=1179144830]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 text = "SFX Volume"
 
-[node name="SFXVolumeSlider" type="HSlider" parent="SettingsPanel/Panel/VBox/SFXVolumeRow"]
+[node name="SFXVolumeSlider" type="HSlider" parent="SettingsPanel/Panel/VBox/SFXVolumeRow" unique_id=866893880]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -204,37 +210,37 @@ max_value = 1.0
 step = 0.05
 value = 1.0
 
-[node name="FullscreenRow" type="HBoxContainer" parent="SettingsPanel/Panel/VBox"]
+[node name="FullscreenRow" type="HBoxContainer" parent="SettingsPanel/Panel/VBox" unique_id=1996962954]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="FullscreenLabel" type="Label" parent="SettingsPanel/Panel/VBox/FullscreenRow"]
+[node name="FullscreenLabel" type="Label" parent="SettingsPanel/Panel/VBox/FullscreenRow" unique_id=1730508783]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 text = "Fullscreen"
 
-[node name="FullscreenCheck" type="CheckButton" parent="SettingsPanel/Panel/VBox/FullscreenRow"]
+[node name="FullscreenCheck" type="CheckButton" parent="SettingsPanel/Panel/VBox/FullscreenRow" unique_id=1509189902]
 layout_mode = 2
 
-[node name="ControlsButton" type="Button" parent="SettingsPanel/Panel/VBox"]
+[node name="ControlsButton" type="Button" parent="SettingsPanel/Panel/VBox" unique_id=1297180530]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "CONTROLS"
 
-[node name="ExitButton" type="Button" parent="SettingsPanel/Panel/VBox"]
+[node name="ExitButton" type="Button" parent="SettingsPanel/Panel/VBox" unique_id=1364573943]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "EXIT GAME"
 
-[node name="CloseButton" type="Button" parent="SettingsPanel/Panel/VBox"]
+[node name="CloseButton" type="Button" parent="SettingsPanel/Panel/VBox" unique_id=1014142454]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "CLOSE"
 
-[node name="ControlsPanel" type="Control" parent="."]
+[node name="ControlsPanel" type="Control" parent="." unique_id=188198445]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -244,7 +250,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("2_controls")
 
-[node name="Dim" type="ColorRect" parent="ControlsPanel"]
+[node name="Dim" type="ColorRect" parent="ControlsPanel" unique_id=466796558]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -253,7 +259,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.65)
 
-[node name="Panel" type="PanelContainer" parent="ControlsPanel"]
+[node name="Panel" type="PanelContainer" parent="ControlsPanel" unique_id=859294138]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -267,74 +273,74 @@ offset_bottom = 300.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBox" type="VBoxContainer" parent="ControlsPanel/Panel"]
+[node name="VBox" type="VBoxContainer" parent="ControlsPanel/Panel" unique_id=897956799]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="ControlsTitle" type="Label" parent="ControlsPanel/Panel/VBox"]
+[node name="ControlsTitle" type="Label" parent="ControlsPanel/Panel/VBox" unique_id=824284873]
 layout_mode = 2
 theme_type_variation = &"PanelTitleLabel"
 text = "CONTROLS"
 horizontal_alignment = 1
 
-[node name="Columns" type="HBoxContainer" parent="ControlsPanel/Panel/VBox"]
+[node name="Columns" type="HBoxContainer" parent="ControlsPanel/Panel/VBox" unique_id=1078162269]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 28
 
-[node name="P1Column" type="VBoxContainer" parent="ControlsPanel/Panel/VBox/Columns"]
+[node name="P1Column" type="VBoxContainer" parent="ControlsPanel/Panel/VBox/Columns" unique_id=1446231297]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="P1Header" type="Label" parent="ControlsPanel/Panel/VBox/Columns/P1Column"]
+[node name="P1Header" type="Label" parent="ControlsPanel/Panel/VBox/Columns/P1Column" unique_id=1010111724]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.302, 0.651, 1, 1)
 theme_override_font_sizes/font_size = 24
 text = "PLAYER 1"
 horizontal_alignment = 1
 
-[node name="ColumnSep" type="VSeparator" parent="ControlsPanel/Panel/VBox/Columns"]
+[node name="ColumnSep" type="VSeparator" parent="ControlsPanel/Panel/VBox/Columns" unique_id=1664444537]
 layout_mode = 2
 
-[node name="P2Column" type="VBoxContainer" parent="ControlsPanel/Panel/VBox/Columns"]
+[node name="P2Column" type="VBoxContainer" parent="ControlsPanel/Panel/VBox/Columns" unique_id=2026440247]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="P2Header" type="Label" parent="ControlsPanel/Panel/VBox/Columns/P2Column"]
+[node name="P2Header" type="Label" parent="ControlsPanel/Panel/VBox/Columns/P2Column" unique_id=1411062849]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.353, 0.353, 1)
 theme_override_font_sizes/font_size = 24
 text = "PLAYER 2"
 horizontal_alignment = 1
 
-[node name="HintLabel" type="Label" parent="ControlsPanel/Panel/VBox"]
+[node name="HintLabel" type="Label" parent="ControlsPanel/Panel/VBox" unique_id=481965786]
 layout_mode = 2
 theme_type_variation = &"HintLabel"
 text = "Click a binding, then press the new key or button. Esc cancels."
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="ButtonRow" type="HBoxContainer" parent="ControlsPanel/Panel/VBox"]
+[node name="ButtonRow" type="HBoxContainer" parent="ControlsPanel/Panel/VBox" unique_id=1028311482]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="ToggleViewButton" type="Button" parent="ControlsPanel/Panel/VBox/ButtonRow"]
+[node name="ToggleViewButton" type="Button" parent="ControlsPanel/Panel/VBox/ButtonRow" unique_id=1816203052]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 20
 text = "GAMEPAD CONTROLS"
 
-[node name="ResetButton" type="Button" parent="ControlsPanel/Panel/VBox/ButtonRow"]
+[node name="ResetButton" type="Button" parent="ControlsPanel/Panel/VBox/ButtonRow" unique_id=1754280065]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 20
 text = "RESET TO DEFAULT"
 
-[node name="ControlsBackButton" type="Button" parent="ControlsPanel/Panel/VBox/ButtonRow"]
+[node name="ControlsBackButton" type="Button" parent="ControlsPanel/Panel/VBox/ButtonRow" unique_id=1889362961]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3

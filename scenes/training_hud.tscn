@@ -1,14 +1,10 @@
 [gd_scene format=3 uid="uid://dtrainhud0001"]
 
-[ext_resource type="Script" path="res://scripts/training/training_hud.gd" id="1_thud"]
-[ext_resource type="FontFile" path="res://art/fonts/Bangers-Regular.ttf" id="2_bangers"]
-[ext_resource type="Texture2D" path="res://assets/hud/health_track.png" id="3_htrk"]
-[ext_resource type="Texture2D" path="res://assets/hud/health_fill_blue.png" id="4_hfill"]
-[ext_resource type="Shader" path="res://shaders/hud_recolor.gdshader" id="5_recolor"]
-
-[sub_resource type="ShaderMaterial" id="SM_dummy_orange"]
-shader = ExtResource("5_recolor")
-shader_parameter/tint = Color(0.91, 0.518, 0.173, 1)
+[ext_resource type="Script" uid="uid://dyfkiu4eifmat" path="res://scripts/training/training_hud.gd" id="1_thud"]
+[ext_resource type="FontFile" uid="uid://dftlhrvtrypfr" path="res://art/fonts/Bangers-Regular.ttf" id="2_bangers"]
+[ext_resource type="Texture2D" uid="uid://didjnoparhn4a" path="res://assets/hud/health_track.png" id="3_htrk"]
+[ext_resource type="Texture2D" uid="uid://7xergn8t8703" path="res://assets/hud/health_fill_blue.png" id="4_hfill"]
+[ext_resource type="Shader" uid="uid://27skjtphu5hr" path="res://shaders/hud_recolor.gdshader" id="5_recolor"]
 
 [sub_resource type="LabelSettings" id="LS_dummy_name"]
 font = ExtResource("2_bangers")
@@ -16,41 +12,48 @@ font_size = 22
 font_color = Color(0.91, 0.518, 0.173, 1)
 outline_size = 4
 outline_color = Color(0, 0, 0, 1)
-shadow_size = 1
 shadow_color = Color(0, 0, 0, 1)
 shadow_offset = Vector2(2, 2)
 
-[node name="TrainingHUD" type="CanvasLayer"]
+[sub_resource type="ShaderMaterial" id="SM_dummy_orange"]
+shader = ExtResource("5_recolor")
+shader_parameter/tint = Color(0.91, 0.518, 0.173, 1)
+
+[node name="TrainingHUD" type="CanvasLayer" unique_id=1711108425]
 layer = 2
 script = ExtResource("1_thud")
 
-[node name="P1Dummy" type="Control" parent="."]
+[node name="P1Dummy" type="Control" parent="." unique_id=1222945789]
+layout_mode = 3
+anchors_preset = 0
 offset_left = 153.0
 offset_top = 192.0
 offset_right = 453.0
 offset_bottom = 252.0
 mouse_filter = 2
 
-[node name="Status" type="Label" parent="P1Dummy"]
+[node name="Status" type="Label" parent="P1Dummy" unique_id=193896061]
+layout_mode = 0
 offset_right = 300.0
 offset_bottom = 30.0
 text = "DUMMY · STAND"
 label_settings = SubResource("LS_dummy_name")
 
-[node name="Bar" type="TextureProgressBar" parent="P1Dummy"]
+[node name="Bar" type="TextureProgressBar" parent="P1Dummy" unique_id=1364949677]
 material = SubResource("SM_dummy_orange")
+layout_mode = 0
 offset_top = 34.0
 offset_right = 260.0
 offset_bottom = 54.0
-max_value = 100.0
 step = 0.01
 value = 100.0
-fill_mode = 0
 nine_patch_stretch = true
 texture_under = ExtResource("3_htrk")
 texture_progress = ExtResource("4_hfill")
 
-[node name="P2Dummy" type="Control" parent="."]
+[node name="P2Dummy" type="Control" parent="." unique_id=2130636103]
+layout_mode = 3
+anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -453.0
@@ -59,20 +62,21 @@ offset_right = -153.0
 offset_bottom = 252.0
 mouse_filter = 2
 
-[node name="Status" type="Label" parent="P2Dummy"]
+[node name="Status" type="Label" parent="P2Dummy" unique_id=261335542]
+layout_mode = 0
 offset_right = 300.0
 offset_bottom = 30.0
-horizontal_alignment = 2
 text = "DUMMY · STAND"
 label_settings = SubResource("LS_dummy_name")
+horizontal_alignment = 2
 
-[node name="Bar" type="TextureProgressBar" parent="P2Dummy"]
+[node name="Bar" type="TextureProgressBar" parent="P2Dummy" unique_id=314160613]
 material = SubResource("SM_dummy_orange")
+layout_mode = 0
 offset_left = 40.0
 offset_top = 34.0
 offset_right = 300.0
 offset_bottom = 54.0
-max_value = 100.0
 step = 0.01
 value = 100.0
 fill_mode = 1
@@ -80,7 +84,8 @@ nine_patch_stretch = true
 texture_under = ExtResource("3_htrk")
 texture_progress = ExtResource("4_hfill")
 
-[node name="Strip" type="Control" parent="."]
+[node name="Strip" type="Control" parent="." unique_id=1373079075]
+layout_mode = 3
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
@@ -90,15 +95,15 @@ grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
 
-[node name="Backing" type="ColorRect" parent="Strip"]
-anchors_preset = 15
+[node name="Backing" type="ColorRect" parent="Strip" unique_id=1941150253]
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0.04, 0.045, 0.06, 0.82)
 mouse_filter = 2
+color = Color(0, 0, 0, 1)
 
-[node name="Row" type="HBoxContainer" parent="Strip"]
-anchors_preset = 15
+[node name="Row" type="HBoxContainer" parent="Strip" unique_id=1292358496]
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 24.0
@@ -107,45 +112,41 @@ offset_right = -24.0
 offset_bottom = -6.0
 theme_override_constants/separation = 24
 
-[node name="Left" type="VBoxContainer" parent="Strip/Row"]
+[node name="Left" type="VBoxContainer" parent="Strip/Row" unique_id=226220800]
 custom_minimum_size = Vector2(380, 0)
 layout_mode = 2
-alignment = 1
 theme_override_constants/separation = 1
+alignment = 1
 
-[node name="MoveReadout" type="Label" parent="Strip/Row/Left"]
+[node name="MoveReadout" type="Label" parent="Strip/Row/Left" unique_id=1857474894]
 layout_mode = 2
 theme_override_font_sizes/font_size = 15
-text = ""
 
-[node name="Advantage" type="Label" parent="Strip/Row/Left"]
+[node name="Advantage" type="Label" parent="Strip/Row/Left" unique_id=1096159752]
 layout_mode = 2
 theme_override_font_sizes/font_size = 15
-text = ""
 
-[node name="Hints" type="Label" parent="Strip/Row"]
+[node name="Hints" type="Label" parent="Strip/Row" unique_id=394598416]
 layout_mode = 2
 size_flags_horizontal = 3
-horizontal_alignment = 1
-vertical_alignment = 1
 theme_override_colors/font_color = Color(0.48, 0.48, 0.55, 1)
 theme_override_font_sizes/font_size = 12
 text = "R RESET  ·  5 METER  ·  1/2 DUMMY MODE  ·  3/4 DUMMY ♥  ·  Q/E PLAYER ♥  ·  F1 HITBOXES"
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="Right" type="VBoxContainer" parent="Strip/Row"]
+[node name="Right" type="VBoxContainer" parent="Strip/Row" unique_id=58033607]
 custom_minimum_size = Vector2(380, 0)
 layout_mode = 2
-alignment = 1
 theme_override_constants/separation = 1
+alignment = 1
 
-[node name="MoveReadout" type="Label" parent="Strip/Row/Right"]
+[node name="MoveReadout" type="Label" parent="Strip/Row/Right" unique_id=154309866]
 layout_mode = 2
-horizontal_alignment = 2
 theme_override_font_sizes/font_size = 15
-text = ""
+horizontal_alignment = 2
 
-[node name="Advantage" type="Label" parent="Strip/Row/Right"]
+[node name="Advantage" type="Label" parent="Strip/Row/Right" unique_id=1168173970]
 layout_mode = 2
-horizontal_alignment = 2
 theme_override_font_sizes/font_size = 15
-text = ""
+horizontal_alignment = 2

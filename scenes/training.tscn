@@ -1,21 +1,23 @@
 [gd_scene format=3 uid="uid://bxmjdq5niqvjc"]
 
-[ext_resource type="Script" path="res://scripts/training/training_main.gd" id="1_tmain"]
+[ext_resource type="Script" uid="uid://bxam46yc6upqb" path="res://scripts/training/training_main.gd" id="1_tmain"]
 [ext_resource type="PackedScene" uid="uid://bmkrf5kiynq8k" path="res://scenes/debug_overlay.tscn" id="2_dbgovl"]
 [ext_resource type="PackedScene" uid="uid://bmkrf5josp6lk" path="res://scenes/character_box.tscn" id="3_charbox"]
-[ext_resource type="Script" path="res://scripts/combat/combat_debug.gd" id="4_dbgbox"]
-[ext_resource type="PackedScene" path="res://scenes/match_hud.tscn" id="5_mhud"]
-[ext_resource type="PackedScene" path="res://scenes/training_hud.tscn" id="7_thud"]
-[ext_resource type="Script" path="res://scripts/training/training_manager.gd" id="8_tmgr"]
-[ext_resource type="Resource" path="res://characters/jerb/jerb_data.tres" id="11_jerbdata"]
+[ext_resource type="Texture2D" uid="uid://841s5k04abwf" path="res://art/ui/backgrounds/ground.png" id="3_ndv2e"]
+[ext_resource type="Script" uid="uid://omskgkc112e0" path="res://scripts/combat/combat_debug.gd" id="4_dbgbox"]
+[ext_resource type="PackedScene" uid="uid://d2aun7w274ukm" path="res://scenes/match_hud.tscn" id="5_mhud"]
+[ext_resource type="PackedScene" uid="uid://dtrainhud0001" path="res://scenes/training_hud.tscn" id="7_thud"]
+[ext_resource type="Script" uid="uid://bohciuw8yvlpg" path="res://scripts/training/training_manager.gd" id="8_tmgr"]
+[ext_resource type="Resource" uid="uid://dgn8y8o55joce" path="res://characters/jerb/jerb_data.tres" id="11_jerbdata"]
 [ext_resource type="Resource" path="res://characters/rainne/rainne_data.tres" id="12_rainnedata"]
 [ext_resource type="PackedScene" path="res://scenes/quit_confirm.tscn" id="16_quitconfirm"]
+[ext_resource type="Texture2D" uid="uid://bkjm8iyg1svvq" path="res://art/ui/backgrounds/background_3.png" id="17_bg"]
 
-[node name="Training" type="Node2D"]
+[node name="Training" type="Node2D" unique_id=268904439]
 script = ExtResource("1_tmain")
 
-[node name="Background" type="ColorRect" parent="."]
-layout_mode = 1
+[node name="Background" type="ColorRect" parent="." unique_id=2021253168]
+visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -23,62 +25,75 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.07, 0.08, 0.11, 1)
 
-[node name="Floor" type="ColorRect" parent="."]
+[node name="ArenaBackground" type="Sprite2D" parent="." unique_id=1183921419]
+position = Vector2(640, 360)
+scale = Vector2(0.7655, 0.7655)
+texture = ExtResource("17_bg")
+
+[node name="Floor" type="ColorRect" parent="." unique_id=823426341]
+offset_left = 1.0
 offset_top = 560.0
 offset_right = 1280.0
-offset_bottom = 570.0
-color = Color(0.25, 0.25, 0.25, 1)
+offset_bottom = 720.0
+color = Color(0, 0, 0, 1)
 
-[node name="MidWall" type="ColorRect" parent="."]
+[node name="MidWall" type="ColorRect" parent="." unique_id=1796102810]
 offset_left = 637.0
-offset_top = 0.0
 offset_right = 643.0
 offset_bottom = 560.0
-color = Color(0.65, 0.65, 0.65, 0.45)
+color = Color(0, 0, 0, 1)
 
-[node name="Camera" type="Camera2D" parent="."]
+[node name="Ground" type="Sprite2D" parent="." unique_id=1538315949]
+position = Vector2(640, 358)
+scale = Vector2(0.7215333, 0.7215333)
+texture = ExtResource("3_ndv2e")
+
+[node name="Camera" type="Camera2D" parent="." unique_id=798313722]
 position = Vector2(640, 360)
 
-[node name="P1" parent="." instance=ExtResource("3_charbox")]
+[node name="P1" parent="." unique_id=1873328562 instance=ExtResource("3_charbox")]
 position = Vector2(250, 560)
+scale = Vector2(1.5, 1.5)
 box_color = Color(0.86, 0.18, 0.16, 1)
 character_data = ExtResource("11_jerbdata")
 
-[node name="P1Dummy" parent="." instance=ExtResource("3_charbox")]
+[node name="P1Dummy" parent="." unique_id=2022711506 instance=ExtResource("3_charbox")]
 position = Vector2(540, 560)
+scale = Vector2(1.5, 1.5)
 player_index = 3
 facing = -1
 box_color = Color(0.95, 0.82, 0.15, 1)
 character_data = ExtResource("12_rainnedata")
 
-[node name="P2Dummy" parent="." instance=ExtResource("3_charbox")]
+[node name="P2Dummy" parent="." unique_id=500465847 instance=ExtResource("3_charbox")]
 position = Vector2(740, 560)
+scale = Vector2(1.5, 1.5)
 player_index = 4
-facing = 1
 box_color = Color(0.86, 0.18, 0.16, 1)
 character_data = ExtResource("11_jerbdata")
 
-[node name="P2" parent="." instance=ExtResource("3_charbox")]
+[node name="P2" parent="." unique_id=1634017269 instance=ExtResource("3_charbox")]
 position = Vector2(1030, 560)
+scale = Vector2(1.5, 1.5)
 player_index = 2
 facing = -1
 box_color = Color(0.95, 0.82, 0.15, 1)
 character_data = ExtResource("12_rainnedata")
 
-[node name="CombatDebug" type="Node2D" parent="."]
+[node name="CombatDebug" type="Node2D" parent="." unique_id=1497884193]
 visible = false
 script = ExtResource("4_dbgbox")
-players = [NodePath("../P1"), NodePath("../P1Dummy"), NodePath("../P2Dummy"), NodePath("../P2")]
+players = Array[NodePath]([NodePath("../P1"), NodePath("../P1Dummy"), NodePath("../P2Dummy"), NodePath("../P2")])
 main_path = NodePath("..")
 
-[node name="DebugOverlay" parent="." instance=ExtResource("2_dbgovl")]
+[node name="DebugOverlay" parent="." unique_id=1571190144 instance=ExtResource("2_dbgovl")]
 visible = false
 
-[node name="MatchHUD" parent="." instance=ExtResource("5_mhud")]
+[node name="MatchHUD" parent="." unique_id=1509253513 instance=ExtResource("5_mhud")]
 
-[node name="TrainingHUD" parent="." instance=ExtResource("7_thud")]
+[node name="TrainingHUD" parent="." unique_id=1425365640 instance=ExtResource("7_thud")]
 
-[node name="TrainingManager" type="Node" parent="."]
+[node name="TrainingManager" type="Node" parent="." unique_id=817036098]
 script = ExtResource("8_tmgr")
 p1_path = NodePath("../P1")
 p1_dummy_path = NodePath("../P1Dummy")
@@ -86,4 +101,4 @@ p2_dummy_path = NodePath("../P2Dummy")
 p2_path = NodePath("../P2")
 hud_path = NodePath("../TrainingHUD")
 
-[node name="QuitConfirm" parent="." instance=ExtResource("16_quitconfirm")]
+[node name="QuitConfirm" parent="." unique_id=667351648 instance=ExtResource("16_quitconfirm")]
