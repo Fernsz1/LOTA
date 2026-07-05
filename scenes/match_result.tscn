@@ -46,6 +46,16 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.05, 0.05, 0.07, 1)
 
+[node name="HeroLayer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+clip_contents = true
+mouse_filter = 2
+
 [node name="Title" type="Label" parent="."]
 layout_mode = 1
 anchors_preset = 10
@@ -58,33 +68,6 @@ theme_override_font_sizes/font_size = 56
 text = "PLAYER 1 WINS"
 horizontal_alignment = 1
 vertical_alignment = 1
-
-[node name="CenterCard" type="VBoxContainer" parent="."]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -160.0
-offset_top = -170.0
-offset_right = 160.0
-offset_bottom = 170.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/separation = 24
-
-[node name="Swatch" type="ColorRect" parent="CenterCard"]
-custom_minimum_size = Vector2(0, 280)
-layout_mode = 2
-color = Color(0.2, 0.5, 0.9, 1)
-
-[node name="CharacterLabel" type="Label" parent="CenterCard"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
-theme_override_font_sizes/font_size = 26
-text = "AS JERB"
-horizontal_alignment = 1
 
 [node name="ButtonColumn" type="VBoxContainer" parent="."]
 layout_mode = 1
