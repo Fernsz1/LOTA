@@ -18,6 +18,12 @@ var p2_name: String = "P2"
 
 var stage_data: StageData = null
 
+# 7.5 — training reuses the versus select flow (character select → stage
+# select). true while the flow was entered from the TRAINING menu item:
+# stage_select then cuts straight to training.tscn instead of the
+# loading-screen → intro → match pipeline.
+var training: bool = false
+
 var pending_scene: PackedScene = null
 
 var winner: int = 0

@@ -6,7 +6,7 @@
 ; Sky Rally (gamePlan.md): cinematic aerial finisher — a takraw juggle ending
 ; in a bicycle-kick spike. damage is the cinematic TOTAL and matches the
 ; projectile's 140 — same locked balance either way; the projectile itself is
-; the non-cinematic fallback (training mode).
+; the non-cinematic fallback (a start denied by a live throw).
 [resource]
 script = ExtResource("1_move")
 move_name = "rainne_ultimate"

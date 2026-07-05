@@ -105,7 +105,12 @@ func _update_status() -> void:
 func _confirm() -> void:
 	_advanced = true
 	MatchSelection.stage_data = _stages[_slot]["data"]
-	get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
+	# 7.5 — training entered this flow from the TRAINING menu item: cut
+	# straight to the training scene (no loading screen / intro card).
+	if MatchSelection.training:
+		get_tree().change_scene_to_file("res://scenes/training.tscn")
+	else:
+		get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
 
 
 func _on_back_pressed() -> void:
