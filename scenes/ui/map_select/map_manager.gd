@@ -5,7 +5,6 @@ extends Node2D
 ## Shared ink + underside tokens (also read by the @tool generator).
 const INK := Color("#0a0904")
 const UNDERSIDE := Color("#2a2612")
-const BASE_COLOR := Color("#343d46")  # TEMPORARY — old hover block still refs it; removed in Task 6
 
 ## adm1_pcode -> macro-region id. Verified against .local/philippines_optimized.json.
 const GROUPS := {
@@ -64,22 +63,37 @@ const REGION_ORDER: Array[String] = [
 signal region_selected(region_name: String, stage_name: String)
 
 const HOVER_LIFT := -15.0
-const BASE_OUTLINE := 2.0   # thin resting stroke (matches generator OUTLINE_WIDTH)
-const HOVER_OUTLINE := 4.0  # modest thickening on hover
+const TOP_STROKE := 7.0
+const HOVER_FILL := Color("#a7a24b")
+const HOVER_STROKE := Color("#ffd24a")
+const HOVER_ACCENT := Color("#ffcf3f")
+const IDLE_ACCENT := Color("#4a5058")
 
 ## Static affine tilt (comic-book diagonal + faked elevation). No 3D.
 const TILT_ROT_DEG := -20.0
 const TILT_SCALE_Y := 0.6560590   # cos(49°)
 
-@export var label_path: NodePath
 @export var map_plane_path: NodePath
+@export var ui_path: NodePath
+@export var markers_path: NodePath
 
 var _hovered: Node2D = null
+var _selected: Node2D = null
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
 	set_process_unhandled_input(true)
+	var ui := _ui()
+	if ui and ui.has_signal("confirm_pressed"):
+		ui.confirm_pressed.connect(confirm)
+	_push_ui(null)  # STANDBY
+
+func _ui() -> Node:
+	return get_node_or_null(ui_path) if not ui_path.is_empty() else null
+
+func _markers() -> Node:
+	return get_node_or_null(markers_path) if not markers_path.is_empty() else null
 
 ## T(p) = centre + R(rot) * S(1, scale_y) * (p - centre). Squash first, then rotate.
 static func tilt_transform(centre: Vector2, rot_deg: float, scale_y: float) -> Transform2D:
@@ -107,20 +121,21 @@ func _regions() -> Array[Node2D]:
 			out.append(r)
 	return out
 
+func _top_of(region: Node2D) -> Node2D:
+	return region.get_node_or_null("Visual/Top") as Node2D
+
 func _visual_of(region: Node2D) -> Node2D:
 	return region.get_node_or_null("Visual") as Node2D
 
-## First region whose fill polygons contain global_pos. Tested in region-local
-## space so the animated hover lift (Visual.position.y) doesn't shift the hit area.
+## First region whose Top-face polygons contain global_pos. Tested in region-local
+## space (which includes the MapPlane tilt via to_local), so neither the tilt nor
+## the hover lift shifts the hit area.
 func _region_at(global_pos: Vector2) -> Node2D:
 	for region in _regions():
-		var visual := _visual_of(region)
-		if visual == null:
-			continue
-		var local := region.to_local(global_pos)
-		var top := visual.get_node_or_null("Top")  # TEMPORARY — Task 6 formalizes this
+		var top := _top_of(region)
 		if top == null:
 			continue
+		var local := region.to_local(global_pos)
 		for child in top.get_children():
 			if child is Polygon2D and Geometry2D.is_point_in_polygon(local, child.polygon):
 				return region
@@ -145,62 +160,112 @@ func _update_hover(global_pos: Vector2) -> void:
 	_hovered = region
 	if _hovered != null:
 		_apply_hover_in(_hovered)
+	else:
+		_push_ui(_selected)  # fall back to selected (or STANDBY)
+
+## Paint a region's Top face + its marker. `state` in {"base","hover","select"}.
+func _paint(region: Node2D, state: String) -> void:
+	var top := _top_of(region)
+	if top == null:
+		return
+	var gid := String(region.name)
+	var meta: Dictionary = REGIONS[gid]
+	var fill: Color
+	var stroke: Color
+	match state:
+		"hover":
+			fill = HOVER_FILL; stroke = HOVER_STROKE
+		"select":
+			fill = meta["neon"]; stroke = meta["neon_stroke"]
+		_:
+			fill = meta["base"]; stroke = INK
+	for child in top.get_children():
+		if child is Polygon2D:
+			child.color = fill
+		elif child is Line2D:
+			child.default_color = stroke
+	var markers := _markers()
+	if markers and markers.has_method("set_color"):
+		var dot: Color = HOVER_STROKE if state == "hover" else \
+			(meta["neon"] if state == "select" else meta["base"])
+		markers.set_color(gid, dot)
 
 func _apply_hover_in(region: Node2D) -> void:
-	var gid := String(region.name)
-	var visual := _visual_of(region)
-	if visual == null:
-		return
+	_hovered = region
 	region.z_index = 1
-	var neon: Color = REGIONS[gid]["neon"]
-	for child in visual.get_children():
-		if child is Polygon2D:
-			child.color = neon
-		elif child is Line2D:
-			child.width = HOVER_OUTLINE
-	var tw := create_tween()
-	tw.set_trans(Tween.TRANS_SPRING).set_ease(Tween.EASE_OUT)
-	tw.tween_property(visual, "position:y", HOVER_LIFT, 0.35)
-	_set_label(REGIONS[gid]["display"])
+	_paint(region, "hover")
+	var visual := _visual_of(region)
+	if visual:
+		var tw := create_tween()
+		tw.set_trans(Tween.TRANS_SPRING).set_ease(Tween.EASE_OUT)
+		tw.tween_property(visual, "position:y", HOVER_LIFT, 0.22)
+	_push_ui(region)
 
 func _apply_hover_out(region: Node2D) -> void:
-	var visual := _visual_of(region)
-	if visual == null:
-		return
 	region.z_index = 0
-	for child in visual.get_children():
-		if child is Polygon2D:
-			child.color = BASE_COLOR
-		elif child is Line2D:
-			child.width = BASE_OUTLINE
-	var tw := create_tween()
-	tw.set_trans(Tween.TRANS_SPRING).set_ease(Tween.EASE_OUT)
-	tw.tween_property(visual, "position:y", 0.0, 0.35)
-	_set_label("")
+	_paint(region, "select" if region == _selected else "base")
+	var visual := _visual_of(region)
+	if visual:
+		var tw := create_tween()
+		tw.set_trans(Tween.TRANS_SPRING).set_ease(Tween.EASE_OUT)
+		tw.tween_property(visual, "position:y", 0.0, 0.22)
 
 func _select(region: Node2D) -> void:
-	var gid := String(region.name)
-	var display: String = REGIONS[gid]["display"]
-	var stage_path: String = REGIONS[gid]["stage"]
-	region_selected.emit(display, stage_path)
-	# Autoload reached via the tree root: the bare identifier is unavailable in --script mode.
-	var main_loop: SceneTree = get_tree() if is_inside_tree() else null
-	var ms: Node = main_loop.root.get_node_or_null("MatchSelection") if main_loop else null
+	if _selected != null and _selected != region:
+		_paint(_selected, "base")
+	_selected = region
+	_paint(region, "select")
+	_push_ui(region)
+
+## Build the UI state dict for the region driving the panel (hovered has priority;
+## else selected; else STANDBY when null).
+func _push_ui(region: Node2D) -> void:
+	var ui := _ui()
+	if ui == null or not ui.has_method("set_state"):
+		return
+	var hovering := _hovered != null
+	var d := {}
+	if region == null:
+		d = {"kicker": "STANDBY", "accent": IDLE_ACCENT, "region_name": "SELECT YOUR ARENA",
+			"region_no": "", "fighter": "—", "stage": "—",
+			"story": "Hover a region to scout its stage and fighter. Click a landmass to lock your pick, then confirm.",
+			"fighter_label": _selected_fighter(), "confirm_enabled": _selected != null}
+	else:
+		var gid := String(region.name)
+		var m: Dictionary = REGIONS[gid]
+		var accent: Color = HOVER_ACCENT if hovering else m["neon"]
+		var kicker := "HOVER · SCOUTING" if hovering else "LOCKED IN"
+		d = {"kicker": kicker, "accent": accent, "region_name": m["display"],
+			"region_no": "(REGION %d)" % m["index"], "fighter": m["fighter"],
+			"stage": m["stage_label"], "story": m["story"],
+			"fighter_label": _selected_fighter(), "confirm_enabled": _selected != null}
+	ui.set_state(d)
+
+func _selected_fighter() -> String:
+	if _selected == null:
+		return "[Selected Fighter Name]"
+	return REGIONS[String(_selected.name)]["fighter"]
+
+## Commit the current selection: show the ribbon, emit, stash stage, navigate.
+func confirm() -> void:
+	if _selected == null:
+		return
+	var gid := String(_selected.name)
+	var meta: Dictionary = REGIONS[gid]
+	var stage_path: String = meta["stage"]
+	region_selected.emit(meta["display"], stage_path)
+	var ui := _ui()
+	if ui and ui.has_method("show_ribbon"):
+		ui.show_ribbon(meta["stage_label"])
+	var tree := get_tree() if is_inside_tree() else null
+	var ms: Node = tree.root.get_node_or_null("MatchSelection") if tree else null
 	if ms and ResourceLoader.exists(stage_path):
 		ms.stage_data = load(stage_path)
-	# 7.5 — training enters this flow from the TRAINING menu item (character
-	# select → map select): cut straight to the training scene, skipping the
-	# loading-screen → intro → match pipeline. Otherwise start the match.
-	var next_scene := "res://scenes/loading_screen.tscn"
-	if ms and ms.training:
-		next_scene = "res://scenes/training.tscn"
-	# Guard scene switch so headless --script tests don't navigate away.
-	if not Engine.is_editor_hint() and main_loop and main_loop.current_scene != null:
-		main_loop.change_scene_to_file(next_scene)
-
-func _set_label(text: String) -> void:
-	if label_path.is_empty():
-		return
-	var lbl := get_node_or_null(label_path)
-	if lbl and lbl is Label:
-		lbl.text = text
+	# Delay navigation so the ribbon plays (~1.55s), then hand off to the existing flow.
+	if not Engine.is_editor_hint() and tree and tree.current_scene != null:
+		var next_scene := "res://scenes/loading_screen.tscn"
+		if ms and ms.training:
+			next_scene = "res://scenes/training.tscn"
+		await tree.create_timer(1.55).timeout
+		if is_inside_tree() and tree.current_scene != null:
+			tree.change_scene_to_file(next_scene)
