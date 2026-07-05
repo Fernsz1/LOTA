@@ -26,6 +26,7 @@ const SKILL_ZOOM_PUNCH: float = 0.18    # extra zoom added on the skill's first 
 const SKILL_ZOOM_DECAY: float = 0.12    # per-physics-frame falloff back to 0
 
 @onready var _overlay: Node = $DebugOverlay
+@onready var _combat_debug: Node = $CombatDebug
 @onready var _p1: CharacterController = $P1
 @onready var _p2: CharacterController = $P2
 @onready var _background: ColorRect = $Background
@@ -46,6 +47,13 @@ func _ready() -> void:
 	process_physics_priority = 1
 	# Each input event dispatched immediately — reduces latency on high-Hz displays.
 	Input.use_accumulated_input = false
+	# Both debug overlays (F1 hitboxes, F2 frame/state panel) stay OFF by default
+	# in a real match — forced here rather than trusting only the .tscn's baked
+	# `visible = false`, since CombatDebug's own _ready() reads `visible` to seed
+	# its `_enabled` toggle state; this guarantees both are in sync. The F1/F2
+	# hotkeys still work for dev use — this only affects the default state.
+	_overlay.visible = false
+	_combat_debug.visible = false
 	# Character-select picks (if any) override the .tscn-authored defaults. Absent
 	# when this scene is run directly (e.g. F6 in the editor) — the tscn's own
 	# character_data/box_color still apply in that case.
