@@ -53,6 +53,48 @@ static func ring_to_points(ring: Array, b: Dictionary) -> PackedVector2Array:
 		pts.append(project(pt[0], pt[1], b))
 	return pts
 
+## Perpendicular distance from p to the segment a-b (or to a if a==b).
+static func _perp_dist(p: Vector2, a: Vector2, b: Vector2) -> float:
+	var ab := b - a
+	var len2 := ab.length_squared()
+	if len2 < 0.0000001:
+		return p.distance_to(a)
+	var t: float = clampf((p - a).dot(ab) / len2, 0.0, 1.0)
+	return p.distance_to(a + ab * t)
+
+## Ramer-Douglas-Peucker polyline simplification (iterative — safe for huge rings).
+## Reduces vertex count massively while preserving overall shape; drives down scene
+## size and, critically, CollisionPolygon2D convex-decomposition cost at load.
+static func simplify(pts: PackedVector2Array, eps: float) -> PackedVector2Array:
+	var n := pts.size()
+	if n < 4:
+		return pts
+	var keep := PackedByteArray()
+	keep.resize(n)
+	keep[0] = 1
+	keep[n - 1] = 1
+	var stack: Array[Vector2i] = [Vector2i(0, n - 1)]
+	while not stack.is_empty():
+		var seg: Vector2i = stack.pop_back()
+		var a := seg.x
+		var b := seg.y
+		var dmax := 0.0
+		var idx := -1
+		for i in range(a + 1, b):
+			var d := _perp_dist(pts[i], pts[a], pts[b])
+			if d > dmax:
+				dmax = d
+				idx = i
+		if dmax > eps and idx != -1:
+			keep[idx] = 1
+			stack.push_back(Vector2i(a, idx))
+			stack.push_back(Vector2i(idx, b))
+	var out := PackedVector2Array()
+	for i in n:
+		if keep[i] == 1:
+			out.append(pts[i])
+	return out
+
 static func ring_area(pts: PackedVector2Array) -> float:
 	var a := 0.0
 	var n := pts.size()
@@ -66,6 +108,7 @@ const VIEW := Vector2(1280, 720)  # match the project's canvas_items base viewpo
 const PAD := 60.0
 const MIN_AREA := 8.0        # drop islets smaller than this (projected px^2)
 const OUTLINE_WIDTH := 2.0   # thin graphic-novel stroke
+const SIMPLIFY_EPS := 1.5    # Douglas-Peucker tolerance (projected px); higher = fewer verts
 const OUTLINE_SHADER := "res://scenes/ui/map_select/outline.gdshader"
 
 @export var build_map: bool = false:
@@ -111,7 +154,10 @@ func build_into(target: Node2D) -> void:
 		var gid: String = Data.GROUPS[pcode]
 		for ring in exterior_rings(f["geometry"]):
 			var pts := ring_to_points(ring, b)
-			if ring_area(pts) >= MIN_AREA:
+			if ring_area(pts) < MIN_AREA:
+				continue
+			pts = simplify(pts, SIMPLIFY_EPS)
+			if pts.size() >= 3:
 				rings_by_region[gid].append(pts)
 
 	var tree := get_tree()
