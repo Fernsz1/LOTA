@@ -33,13 +33,9 @@ grow_horizontal = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="TitleBlock" type="PanelContainer" parent="Header"]
+[node name="SelectTitle" type="Label" parent="Header"]
 layout_mode = 2
 size_flags_horizontal = 4
-theme_type_variation = &"TitleBlock"
-
-[node name="SelectTitle" type="Label" parent="Header/TitleBlock"]
-layout_mode = 2
 theme_type_variation = &"SelectTitle"
 text = "SELECT FIGHTER"
 horizontal_alignment = 1
