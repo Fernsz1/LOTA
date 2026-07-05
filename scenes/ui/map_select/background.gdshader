@@ -25,16 +25,6 @@ void fragment() {
 	float glow = clamp(1.0 - length(gp), 0.0, 1.0);
 	col += vec3(1.0, 0.690, 0.329) * glow * glow * 0.55;
 
-	// three distant island humps on the horizon (~top third).
-	float humps = 0.0;
-	humps = max(humps, smoothstep(0.11, 0.10, distance(uv, vec2(0.20, 0.355)) * vec2(1.0, 5.0).x));
-	// approximate humps as squashed discs
-	humps = max(humps, 1.0 - smoothstep(0.0, 1.0, length((uv - vec2(0.20, 0.360)) / vec2(0.09, 0.03))));
-	humps = max(humps, 1.0 - smoothstep(0.0, 1.0, length((uv - vec2(0.65, 0.355)) / vec2(0.055, 0.032))));
-	humps = max(humps, 1.0 - smoothstep(0.0, 1.0, length((uv - vec2(0.90, 0.360)) / vec2(0.10, 0.036))));
-	humps *= step(uv.y, 0.375);  // only above the horizon line
-	col = mix(col, vec3(0.145, 0.117, 0.105), humps * 0.5);
-
 	// faint water sheen streaks (screen-ish) from ~46% down.
 	if (uv.y > 0.46) {
 		float streak = step(0.5, fract(uv.y * 720.0 / 40.0)) * 0.03;
