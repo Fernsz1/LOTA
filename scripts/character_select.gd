@@ -64,6 +64,55 @@ func _load_art(id: String, kind: String) -> Texture2D:
 	return load(path) if ResourceLoader.exists(path) else null
 
 
+## Bounding rect (in source pixels) of each art's non-transparent content, so
+## framing keys off the actual head/body instead of the canvas — the arts have
+## wildly different headroom (Sofia sits low in a tall 887×1774 canvas, Jerb
+## nearly fills a 1023×1537 one), which is why a naive top-pin cropped some
+## faces off. Cached per texture path; get_used_rect scans once.
+var _used_rect_cache: Dictionary = {}
+
+
+func _content_rect(tex: Texture2D) -> Rect2:
+	var key := tex.resource_path
+	if _used_rect_cache.has(key):
+		return _used_rect_cache[key]
+	var rect := Rect2(Vector2.ZERO, Vector2(tex.get_width(), tex.get_height()))
+	var img := tex.get_image()
+	if img != null:
+		var used := img.get_used_rect()
+		if used.size.x > 0 and used.size.y > 0:
+			rect = Rect2(used.position, used.size)
+	_used_rect_cache[key] = rect
+	return rect
+
+
+## Places character art as a "bust": the whole figure is scaled so its visible
+## body (from get_used_rect) is `vert_fill`× the container height, then the head
+## is pinned just below the top edge and the figure biased toward one side
+## (+1 = right, -1 = left, 0 = centred). vert_fill > 1 means the legs fall past
+## the bottom and get clipped, leaving a head-to-hip framing like the mock.
+## Requires the parent to clip_contents.
+func _add_bust_art(parent: Control, container: Vector2, tex: Texture2D, vert_fill: float, side: float) -> void:
+	if tex == null:
+		return
+	var content := _content_rect(tex)
+	var scale := container.y * vert_fill / content.size.y
+	var art := TextureRect.new()
+	art.texture = tex
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_SCALE
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	art.size = Vector2(tex.get_width(), tex.get_height()) * scale
+	# Land the head a hair below the top edge, and the body's horizontal centre
+	# at the biased target x.
+	var head_y := container.y * 0.05
+	var target_cx := container.x * 0.5 + side * (container.x * 0.15)
+	var content_cx := (content.position.x + content.size.x * 0.5) * scale
+	var content_top := content.position.y * scale
+	art.position = Vector2(target_cx - content_cx, head_y - content_top)
+	parent.add_child(art)
+
+
 func _ready() -> void:
 	_slots = _build_roster()
 	for i in _slots.size():
@@ -128,12 +177,12 @@ func _build_slot(slot: Dictionary, index: int) -> Control:
 	root.clip_contents = true
 	tile.add_child(root)
 
-	var backdrop := ColorRect.new()
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.color = accent if not locked else Color(0.13, 0.13, 0.15, 1.0)
-	root.add_child(backdrop)
-
 	if locked:
+		var backdrop := ColorRect.new()
+		backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+		backdrop.color = Color(0.13, 0.13, 0.15, 1.0)
+		root.add_child(backdrop)
+
 		var mystery := Label.new()
 		mystery.text = "?"
 		mystery.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -143,12 +192,21 @@ func _build_slot(slot: Dictionary, index: int) -> Control:
 		mystery.add_theme_color_override("font_color", Color(0.604, 0.561, 0.478, 0.9))
 		root.add_child(mystery)
 	else:
-		var art := TextureRect.new()
-		art.set_anchors_preset(Control.PRESET_FULL_RECT)
-		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		art.texture = _load_art(slot["id"], "transparent")
-		root.add_child(art)
+		# Character's stage bg behind, tinted toward the signature accent, with
+		# the fighter framed as a bust on top — same layering as the big panels.
+		var bg := TextureRect.new()
+		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+		bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		bg.texture = _load_art(slot["id"], "bg")
+		root.add_child(bg)
+
+		var wash := ColorRect.new()
+		wash.set_anchors_preset(Control.PRESET_FULL_RECT)
+		wash.color = Color(accent, 0.32)
+		root.add_child(wash)
+
+		_add_bust_art(root, SLOT_SIZE, _load_art(slot["id"], "transparent"), 1.85, 0.28)
 
 	# dark scrim so the name stays legible over busy art
 	var scrim := ColorRect.new()
@@ -244,12 +302,9 @@ func _refresh_panel(player: int) -> void:
 		wash.color = Color(accent, 0.16)
 		root.add_child(wash)
 
-		var art := TextureRect.new()
-		art.set_anchors_preset(Control.PRESET_FULL_RECT)
-		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		art.texture = _load_art(slot["id"], "transparent")
-		root.add_child(art)
+		# Bust framing pushed toward the inner (VS) edge — P1 leans right, P2 left.
+		_add_bust_art(root, panel.size, _load_art(slot["id"], "transparent"),
+			1.5, 1.0 if player == 1 else -1.0)
 	else:
 		var backdrop := ColorRect.new()
 		backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
