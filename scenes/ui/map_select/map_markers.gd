@@ -8,6 +8,14 @@ const INK := Color("#0a0904")
 
 @export var map_plane_path: NodePath
 
+## Screen-space nudges to pull overlapping beacons apart. Northern & Central Luzon
+## share almost the same X column, so their upright beams sit on top of each other —
+## push them to opposite sides.
+const NUDGE := {
+	"NorthernLuzon": Vector2(-38.0, 0.0),
+	"CentralLuzon": Vector2(38.0, 0.0),
+}
+
 var _colors := {}   # gid -> Color
 
 func _ready() -> void:
@@ -26,8 +34,8 @@ func _auto_build() -> void:
 		if region == null or not region.has_meta("centroid"):
 			continue
 		var centroid: Vector2 = region.get_meta("centroid")
-		entries.append({"gid": gid, "pos": plane.transform * centroid,
-			"color": Data.REGIONS[gid]["base"]})
+		var pos: Vector2 = plane.transform * centroid + NUDGE.get(gid, Vector2.ZERO)
+		entries.append({"gid": gid, "pos": pos, "color": Data.REGIONS[gid]["base"]})
 	build(entries)
 
 func build(entries: Array) -> void:
@@ -68,10 +76,10 @@ func _draw_beacon(beacon: Node2D) -> void:
 	var col: Color = _colors.get(String(beacon.name), Color.WHITE)
 	# upright light beam: a soft vertical cone rising from the beacon
 	var beam := PackedVector2Array([
-		Vector2(-4, 0), Vector2(4, 0), Vector2(26, -190), Vector2(-26, -190)])
+		Vector2(-3, 0), Vector2(3, 0), Vector2(18, -190), Vector2(-18, -190)])
 	beacon.draw_colored_polygon(beam, Color(col.r, col.g, col.b, 0.22))
 	var core_beam := PackedVector2Array([
-		Vector2(-1.5, 0), Vector2(1.5, 0), Vector2(7, -180), Vector2(-7, -180)])
+		Vector2(-1.5, 0), Vector2(1.5, 0), Vector2(5, -180), Vector2(-5, -180)])
 	beacon.draw_colored_polygon(core_beam, Color(col.r, col.g, col.b, 0.5))
 	# pulsing halo
 	beacon.draw_circle(Vector2.ZERO, 22.0, Color(col.r, col.g, col.b, 0.25))

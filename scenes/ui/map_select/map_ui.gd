@@ -116,6 +116,8 @@ func _draw_header() -> void:
 	_overlay.draw_string(_display, Vector2(cx + 3, 33), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, INK)
 	_overlay.draw_string(_display, Vector2(cx, 30), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, TXT_HI)
 	var flabel: String = _state.get("fighter_label", "")
+	if flabel == "":
+		return  # no fighter locked in yet — omit the header subtitle entirely
 	var sub := "FIGHTER:  "
 	var sw := _body.get_string_size(sub + flabel, HORIZONTAL_ALIGNMENT_LEFT, -1, 15)
 	var sx := 640.0 - sw.x * 0.5

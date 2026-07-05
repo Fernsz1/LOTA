@@ -243,7 +243,7 @@ func _push_ui(region: Node2D) -> void:
 
 func _selected_fighter() -> String:
 	if _selected == null:
-		return "[Selected Fighter Name]"
+		return ""  # header hides the FIGHTER line until a real pick is locked in
 	return REGIONS[String(_selected.name)]["fighter"]
 
 ## Commit the current selection: show the ribbon, emit, stash stage, navigate.

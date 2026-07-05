@@ -21,6 +21,7 @@ func _init() -> void:
 	bg.name = "Background"
 	bg.size = Vector2(1280, 720)
 	bg.z_index = -10
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE  # never intercept map clicks/hover
 	if ResourceLoader.exists(BG_SHADER):
 		var mat := ShaderMaterial.new()
 		mat.shader = load(BG_SHADER)
