@@ -44,6 +44,8 @@ const CURSOR_MARGIN := 6.0
 
 const ART_DIR := "res://assets/char-select/"
 const BEBAS := preload("res://art/fonts/BebasNeue-Regular.ttf")
+const SKEW_SHADER := preload("res://art/ui/skew.gdshader")
+const SKEW_AMOUNT := 0.1
 
 const INK := Color(0.047, 0.031, 0.024, 1)
 const BONE := Color(0.957, 0.929, 0.886, 1)
@@ -393,6 +395,8 @@ func _refresh_panel(player: int) -> void:
 		badge.offset_right = -8.0
 	root.add_child(badge)
 
+	_apply_skew(panel)
+
 
 func _info_stylebox(accent: Color) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
@@ -429,7 +433,28 @@ func _badge_stylebox(accent: Color) -> StyleBoxFlat:
 	return sb
 
 
+## Shears an entire card (frame + art + text) into a leaning parallelogram by
+## assigning one world-space skew material to every CanvasItem in its subtree,
+## pivoting about the card's vertical centre so it tilts in place. Layout rects
+## are untouched, so cursor placement and hit logic keep working.
+func _apply_skew(node: CanvasItem) -> void:
+	var mat := ShaderMaterial.new()
+	mat.shader = SKEW_SHADER
+	mat.set_shader_parameter("shear", SKEW_AMOUNT)
+	mat.set_shader_parameter("pivot_y", node.get_global_rect().get_center().y)
+	_assign_material(node, mat)
+
+
+func _assign_material(node: CanvasItem, mat: Material) -> void:
+	node.material = mat
+	for child in node.get_children():
+		if child is CanvasItem:
+			_assign_material(child, mat)
+
+
 func _init_cursors() -> void:
+	for tile in _slot_nodes:
+		_apply_skew(tile)
 	_update_cursor(_p1_cursor, _p1_slot)
 	_update_cursor(_p2_cursor, _p2_slot)
 	_update_status()
@@ -486,6 +511,8 @@ func _update_cursor(cursor: Control, slot: int) -> void:
 	var local_pos: Vector2 = node.get_global_rect().position - global_position
 	cursor.position = local_pos - Vector2(CURSOR_MARGIN, CURSOR_MARGIN)
 	cursor.size = node.get_global_rect().size + Vector2(CURSOR_MARGIN, CURSOR_MARGIN) * 2.0
+	# Lean the selection outline to match the slanted tile it wraps.
+	_apply_skew(cursor)
 
 
 func _update_status() -> void:
