@@ -115,17 +115,9 @@ func _draw_header() -> void:
 	var title := "MAP SELECT"
 	var tw := _display.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 34)
 	var cx := 640.0 - tw.x * 0.5
-	_overlay.draw_string(_display, Vector2(cx + 3, 33), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, INK)
-	_overlay.draw_string(_display, Vector2(cx, 30), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, TXT_HI)
-	var flabel: String = _state.get("fighter_label", "")
-	if flabel == "":
-		return  # no fighter locked in yet — omit the header subtitle entirely
-	var sub := "FIGHTER:  "
-	var sw := _body.get_string_size(sub + flabel, HORIZONTAL_ALIGNMENT_LEFT, -1, 15)
-	var sx := 640.0 - sw.x * 0.5
-	_overlay.draw_string(_body, Vector2(sx, 58), sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#cdd5dc"))
-	var lead := _body.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
-	_overlay.draw_string(_body, Vector2(sx + lead, 58), flabel, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, GOLD)
+	# baseline pushed down for breathing room above the title (no top-edge stick)
+	_overlay.draw_string(_display, Vector2(cx + 3, 56), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, INK)
+	_overlay.draw_string(_display, Vector2(cx, 53), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, TXT_HI)
 
 func _draw_panel() -> void:
 	var xf := _skew_x(-2.0, PANEL.position)
@@ -150,9 +142,6 @@ func _draw_panel() -> void:
 	y += 30
 	_overlay.draw_string(_display, Vector2(x, y), _state.get("region_name", ""),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color("#f2f4f7"))
-	var nmw := _display.get_string_size(_state.get("region_name", ""), HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x
-	_overlay.draw_string(_body, Vector2(x + nmw + 8, y), _state.get("region_no", ""),
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#8b94a0"))
 	y += 20
 	# dashed divider
 	var dx := x

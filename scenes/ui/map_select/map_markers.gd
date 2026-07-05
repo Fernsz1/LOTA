@@ -12,8 +12,8 @@ const INK := Color("#0a0904")
 ## share almost the same X column, so their upright beams sit on top of each other —
 ## push them to opposite sides.
 const NUDGE := {
-	"NorthernLuzon": Vector2(-38.0, 0.0),
-	"CentralLuzon": Vector2(38.0, 0.0),
+	"NorthernLuzon": Vector2(-14.0, 0.0),
+	"CentralLuzon": Vector2(14.0, 0.0),
 }
 
 var _colors := {}   # gid -> Color
