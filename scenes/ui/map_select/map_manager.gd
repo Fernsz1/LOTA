@@ -263,7 +263,7 @@ func confirm() -> void:
 		ms.stage_data = load(stage_path)
 	# Delay navigation so the ribbon plays (~1.55s), then hand off to the existing flow.
 	if not Engine.is_editor_hint() and tree and tree.current_scene != null:
-		var next_scene := "res://scenes/loading_screen.tscn"
+		var next_scene := "res://scenes/character_intro.tscn"
 		if ms and ms.training:
 			next_scene = "res://scenes/training.tscn"
 		await tree.create_timer(1.55).timeout
