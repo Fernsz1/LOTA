@@ -1,13 +1,19 @@
 extends Control
-## Post-select VS card: shows both locked-in fighters as full busts before the
-## match starts. Auto-advances after DISPLAY_SECONDS, or immediately on any key.
+## Post-select VS card: shows both locked-in fighters as full busts while the
+## match scene loads in the background — this screen *is* the loading screen.
+## Advances once both the minimum display time has elapsed and main.tscn has
+## finished loading; any key skips the wait but still holds until the load is done.
 ##
 ## Reuses the character-select visual language (7.2/7.6): each side pairs the
 ## fighter's stage bg (accent-washed) with a used-rect bust leaning toward the
 ## centre VS badge, an accent name/tag plate, and the same parallelogram skew —
 ## so the intro reads as the same screen family, not a bare placeholder card.
 
+## Minimum time the VS card stays up, so a fast load still gives it a beat to read.
 const DISPLAY_SECONDS := 2.5
+
+## Match scene loaded on a background thread while the busts are on screen.
+const TARGET_SCENE := "res://scenes/main.tscn"
 
 const ART_DIR := "res://assets/char-select/"
 const BEBAS := preload("res://art/fonts/BebasNeue-Regular.ttf")
@@ -35,8 +41,19 @@ const GENERIC_TAG := "FIGHTER"
 var _advanced: bool = false
 var _used_rect_cache: Dictionary = {}
 
+# Advance gating: we leave once the match scene is loaded AND either the minimum
+# display time has passed or the player pressed a key to skip the wait.
+var _loading: bool = false
+var _min_time_reached: bool = false
+var _skip_requested: bool = false
+
 
 func _ready() -> void:
+	# A prior screen may already have handed us the loaded scene; only kick off the
+	# background load ourselves if it hasn't, so this card doubles as the loader.
+	if MatchSelection.pending_scene == null:
+		ResourceLoader.load_threaded_request(TARGET_SCENE)
+		_loading = true
 	# Panel rects resolve at end-of-frame; building now would read zero sizes and
 	# mis-scale the busts, so defer until the HBox has been sorted.
 	call_deferred("_build")
@@ -46,16 +63,37 @@ func _build() -> void:
 	_build_side(_p1_panel, 1)
 	_build_side(_p2_panel, 2)
 	await get_tree().create_timer(DISPLAY_SECONDS).timeout
-	_advance()
+	_min_time_reached = true
+	_try_advance()
+
+
+func _process(_delta: float) -> void:
+	if not _loading:
+		return
+	var status := ResourceLoader.load_threaded_get_status(TARGET_SCENE)
+	match status:
+		ResourceLoader.THREAD_LOAD_LOADED:
+			_loading = false
+			MatchSelection.pending_scene = ResourceLoader.load_threaded_get(TARGET_SCENE)
+			_try_advance()
+		ResourceLoader.THREAD_LOAD_FAILED, ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			_loading = false
+			push_error("character_intro: failed to load %s" % TARGET_SCENE)
+			_advanced = true
+			get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
-		_advance()
+		_skip_requested = true
+		_try_advance()
 
 
-func _advance() -> void:
-	if _advanced:
+func _try_advance() -> void:
+	if _advanced or _loading:
+		return
+	# Still loading is gated above; here we only need the display beat or a skip.
+	if not (_min_time_reached or _skip_requested):
 		return
 	_advanced = true
 	if MatchSelection.pending_scene != null:
